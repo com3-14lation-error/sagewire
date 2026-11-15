@@ -1,7 +1,17 @@
 # Power system harness (work in progress)
-# Scope: battery -> PDB -> BECs, PDB ESC pads -> XT90 female at the wing split (VTOL motors), and
-# PDB ESC pad -> forward-thrust ESC (direct, no wing split).
+# Scope: battery -> PDB -> the two KDE UBECUVC (inputs only), PDB ESC pads -> XT90 female at the wing
+# split (VTOL motors), and PDB ESC pad -> forward-thrust ESC (direct, no wing split).
 # The PDB -> flight controller link lives in flight_control_system.yaml.
+#
+# BEC architecture (current decision): two KDE UBECUVC, both on PDB ESC pads (battery bus).
+#   - 12 V UBEC (ESC7 pads): Jetson (HP leads), SIYI camera (servo port 5), the four wing servos
+#     (servo ports 1 to 4). Outputs are wired in cellular_system.yaml and actuators_system.yaml.
+#   - 5 V UBEC (ESC8 pads): Mesh Rider radio (HP leads, rf_system.yaml) and the six wing LEDs (servo
+#     ports 1 to 6, actuators_system.yaml). 5 V for now; the final voltage (5 V or 6 V) is open, see
+#     the note on UBEC5_IN.
+#   - PDB on-board BECs: the 5 V BEC only feeds the Cube through the PDB 6-pin output (and the Cube
+#     peripherals: GPS, airspeed, LiDAR). The PDB 12 V BEC is not used.
+# The two Waveshare 5G dongles are powered from the Jetson USB for now (cellular_system.yaml).
 #
 # Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
 # Gauges and colors are recommendations, see the comment above each cable.
@@ -35,19 +45,36 @@ connectors:
     hide_disconnected_pins: true
     ignore_in_bom: true
 
-  # KDE UBECUVC input leads: factory 16 AWG red/black, pre-tinned 2 mm exposed ends.
+  # 12 V KDE UBECUVC input leads: factory 16 AWG red/black, pre-tinned 2 mm exposed ends.
   # The leads come with the UBEC, so they are modelled as cable W_PWR_01 and nothing goes in the BOM.
-  UBEC_IN:
+  # Output set to 12 V with the top button (voltage indicator LEDs 5/6/8/12 V). Loads: Jetson on the
+  # HP leads, camera on servo port 5, four wing servos on servo ports 1 to 4.
+  # Ratings at 12 V: 10 A continuous (600 s), 18 A total limit, 22 A peak (5 s), 3.3 A per servo port.
+  # Load: realistic about 8 A (servos nowhere near stall). Worst case 11.0 A continuous with every
+  # servo at 1.3 A, 14.6 A burst with every servo at 2.2 A; with a 40 W Jetson module about 12 A.
+  # TODO: measure the real Jetson draw (set the nvpmodel power mode cap) and the real servo draw on
+  # the bench, then check the margin against the 10 A continuous rating.
+  # TODO: set and verify the output voltage with a meter BEFORE connecting any load.
+  UBEC12_IN:
     type: UBEC input (factory leads exit the body)
-    notes: "KDE UBECUVC input: red (+), black (-). Input 14.8 V (4S) to 60.9 V (14S LiHV) per spec table."
+    notes: "12 V KDE UBECUVC input: red (+), black (-). Input 14.8 V (4S) to 60.9 V (14S LiHV) per spec table."
     pinlabels: [IN_POS, IN_NEG]
     ignore_in_bom: true
 
-  # Teravolt AeroBuck-5 5 V buck converter (powers the LED). Input is solder pads, so
-  # nothing to buy here. Its output is modelled in another file.
-  BEC5V_IN:
-    type: Solder pads
-    notes: "Teravolt AeroBuck-5 5V"
+  # 5 V KDE UBECUVC (same model as above, replaces the Teravolt AeroBuck-5). Input leads are the
+  # factory 16 AWG red/black, so they are modelled as cable W_PWR_02 and nothing goes in the BOM.
+  # Loads: Mesh Rider radio on the HP leads (1.6 A peak), six wing LEDs on servo ports 1 to 6 (0.8 A
+  # peak each, 1 A max). About 6.4 A peak (7.6 A at the 1 A LED maximum), strobes are not on
+  # continuously. Ratings at 5 V: 10 A continuous (600 s), 22 A total limit.
+  # TODO: final output voltage (5 V or 6 V), decide before the first power-up. The radio is
+  # specified 5 V +/- 5 % (4.75 to 5.25 V), so 6 V is out of spec for it (and for the USB dongles if
+  # they move to this UBEC later); the StrobeIT input range is marked 5 V* in the notes, so check
+  # the listing before going above 5 V. The wing LED wires are 22 AWG, about 0.25 V drop over 3 m,
+  # so the LEDs do not need a higher voltage.
+  # TODO: set and verify the output voltage with a meter BEFORE connecting any load.
+  UBEC5_IN:
+    type: UBEC input (factory leads exit the body)
+    notes: "5 V KDE UBECUVC input: red (+), black (-). Input 14.8 V (4S) to 60.9 V (14S LiHV) per spec table."
     pinlabels: [IN_POS, IN_NEG]
     ignore_in_bom: true
 
@@ -67,8 +94,9 @@ connectors:
     pinlabels: [SW_1, SW_2]
 
   # Latching 16 mm metal pushbutton with LED ring (ProMax PPS16006RL-11F, from the seller listing).
-  # C and NO go to the PDB. The LED has its own two pins and is wired in another file
-  # (5 V from the AeroBuck-5 output). Listing says LED 5 V in one place and 6 V in another.
+  # C and NO go to the PDB. The LED has its own two pins, not wired for now (the pushbutton LED is
+  # left out of the BEC load; it would come from the 5 V UBEC). Listing says LED 5 V in one place
+  # and 6 V in another.
   # TODO: confirm terminal type (listing says both "crimp style" and "solder lugs") and whether
   # the LED has a built-in resistor.
   SW_BTN:
@@ -134,9 +162,11 @@ connectors:
     ignore_in_bom: true
 
   # --- Parked (not used in this build) -------------------------------------------------
-  # PDB on-board BEC header (J3, 2x7): four 5 V and three 12 V outputs. None of them is used:
-  # the Cube is powered from the PDB 6-pin output (see flight_control_system.yaml) and the
-  # 5 V LED supply comes from the separate AeroBuck-5. Kept commented out for reference.
+  # PDB on-board BEC header (J3, 2x7): four 5 V and three 12 V outputs. None of them is wired here:
+  # the Cube is powered from the PDB 6-pin output (the PDB 5 V BEC, see flight_control_system.yaml)
+  # and the other loads are on the two KDE UBECs (outputs modelled in cellular_system.yaml,
+  # actuators_system.yaml and rf_system.yaml). The PDB 12 V BEC is unused (4 A continuous, 5 A peak
+  # per BEC, all outputs of one voltage share one bus). Kept commented out for reference.
   # Un-comment it if a load is ever wired to this header.
   #
   # PDB_J3_BEC:
@@ -146,37 +176,29 @@ connectors:
   #               GND_1, GND_2, GND_3, GND_4, GND_5, GND_6, GND_7]
   #   hide_disconnected_pins: true
   #   ignore_in_bom: true
-  #
-  # KDE UBECUVC high-current (HP) output leads. Output is modelled in another file.
-  #
-  # UBEC_HP:
-  #   type: UBEC high-current output lead ends (pre-tinned)
-  #   notes: "KDE UBECUVC HP output: yellow (+), black (-), 16 AWG, about 210 mm. Output voltage selectable 5/6/8/12 V, set to 12 V. 10 A continuous through the leads."
-  #   pinlabels: [HP_POS, HP_NEG]
-  #   ignore_in_bom: true
 
 cables:
 
-  # PDB -> KDE UBEC input. These are the UBEC's own factory leads (16 AWG, red/black, about
+  # PDB -> 12 V KDE UBEC input. These are the UBEC's own factory leads (16 AWG, red/black, about
   # 210 mm), so they stay out of the BOM. Keep 16 AWG if the leads are ever extended: the UBEC
-  # is rated 10 A continuous output, so input current is a few amps at battery voltage.
+  # is rated 10 A continuous output (about 120 W), so input current is about 3 A at battery voltage.
   W_PWR_01:
     wirecount: 2
     gauge: 16 AWG
     colors: [RD, BK]
     length: 0   # TODO: real length after layout analysis (factory leads are about 0.21 m)
     ignore_in_bom: true
-    notes: "Factory UBEC input leads"
+    notes: "Factory input leads of the 12 V UBEC"
 
-  # PDB -> AeroBuck-5 input. Converter is 5 V / 4 A / 20 W max, so input is under about 2 A
-  # even at the lowest battery voltage. 22 AWG is plenty and easy to solder to the small pads.
-  # (Silicone-insulated stranded wire is the usual choice for flexibility and soldering.)
+  # PDB -> 5 V KDE UBEC input. Same model as W_PWR_01, so the same factory leads (16 AWG, about
+  # 210 mm, out of the BOM). Input current is about 1 A at battery voltage for the 6.4 A load.
   W_PWR_02:
     wirecount: 2
-    gauge: 22 AWG
+    gauge: 16 AWG
     colors: [RD, BK]
-    length: 0   # TODO: real length after layout analysis
-    notes: "AeroBuck-5 input"
+    length: 0   # TODO: real length after layout analysis (factory leads are about 0.21 m)
+    ignore_in_bom: true
+    notes: "Factory input leads of the 5 V UBEC"
 
   # PDB soft switch -> pushbutton, plain two-wire contact, so 24 AWG is plenty.
   # Colors only help tell the two ends apart; polarity does not matter.
@@ -258,16 +280,16 @@ connections:
     - W_PWR_03: [1, 2]
     - SW_BTN: ["C", "NO"]
 
-  # PDB -> UBEC. ESC7 pad pair is a placeholder; any pad pair that is free works.
+  # PDB -> 12 V UBEC. ESC7 pad pair is a placeholder; any pad pair that is free works.
   # TODO: confirm with a continuity check that the ESC pads connect straight to B+/B-.
   - - PDB_ESC: [ESC7_POS, ESC7_NEG]
     - W_PWR_01: [1, 2]
-    - UBEC_IN: [IN_POS, IN_NEG]
+    - UBEC12_IN: [IN_POS, IN_NEG]
 
-  # PDB -> 5 V BEC. ESC8 pad pair is a placeholder, same checks as above.
+  # PDB -> 5 V UBEC. ESC8 pad pair is a placeholder, same checks as above.
   - - PDB_ESC: [ESC8_POS, ESC8_NEG]
     - W_PWR_02: [1, 2]
-    - BEC5V_IN: [IN_POS, IN_NEG]
+    - UBEC5_IN: [IN_POS, IN_NEG]
 
   # PDB ESC pads -> XT90 female at the wing split, VTOL motors 1 to 4 (ArduPilot Quad X default order:
   # 1 front right, 2 rear left, 3 front left, 4 rear right; the ESC1 to ESC4 pad pairs follow the motor number).

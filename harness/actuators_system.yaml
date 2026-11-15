@@ -16,9 +16,11 @@
 # every servo has its own CAN pair plus a GND wire to its own port on the passive CAN splitter
 # (ports 2 to 5; port 1, the Cube link, is in flight_control_system.yaml). The servo end of each wing
 # cable is an M5 male plug that mates with the servo's own M5 lead. The DB-25 pin order
-# below is provisional (not fixed yet). The fuselage side sources (12 V, 5 V, Cube outputs) are not
-# modelled yet, so those fuselage pins only show the mate to the wing side, apart from the CAN
-# and GND wires to the splitter.
+# below is provisional (not fixed yet). Fuselage side sources: the servo 12 V comes from servo ports
+# 1 to 4 of the 12 V KDE UBEC and the LED 5 V from servo ports 1 to 6 of the 5 V KDE UBEC (cables
+# W_ACT_42 to W_ACT_51). The ESC signal (S and signal ground) comes from Cube AUX OUT 1 to 5
+# (W_ACT_52 to W_ACT_56) and the LED PWM from Cube MAIN OUT 1 to 6 (W_ACT_57 to W_ACT_62); the ESC
+# telemetry (T) is not modelled yet, so those fuselage pins only show the mate to the wing side.
 #
 # Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
 # Gauges and colors are recommendations, see the comment above each cable.
@@ -499,8 +501,9 @@ connectors:
   # is spare. Which physical port is which does not matter, they are all the same net.
   # WARNING: the splitter pin 1 is 5 V and bussed. The servos have 12 V on their pin 1, so the servo
   # branches use only CAN_H, CAN_L and GND: pin 1 stays empty on ports 2 to 5. The GND wire is the
-  # same DB-25 pin as the servo power GND, so once the 12 V supply is wired the servo return current
-  # has two paths (the power wire and, through the splitter GND, the Cube); keep that in mind.
+  # same DB-25 pin as the servo power GND, and the 12 V supply is now wired (W_ACT_42 to W_ACT_45),
+  # so the servo return current has two paths (the power wire back to the 12 V UBEC and, through the
+  # splitter GND, the Cube); the power wire is the short, heavier path, so it takes almost all of it.
   # NOTE: the Zeus servos have NO built-in CAN termination (mostly confirmed, not yet measured), so
   # the bus end at the Cube (120 ohm on the Cube port) is the only termination on this branch.
   # TODO: confirm by measuring CAN_H to CAN_L on a servo, power off. If a servo does turn out to
@@ -541,6 +544,193 @@ connectors:
     mpn: GHR-04V-S
     notes: "CAN splitter port 5 (passive, bussed): right wing servo 2"
     pinlabels: [VCC_5V, CAN_H, CAN_L, GND]
+
+  # ---- UBEC servo ports: fuselage-side power for the wing servos (12 V) and LEDs (5 V) ------------
+  # Both KDE UBECUVC have six 3-pin male servo headers (JST-style servo pin-out, pin order S, +, -,
+  # 3.3 A max per port). The harness side is a standard 3-pin servo plug housing (2.54 mm); only +
+  # and - are used, S stays empty (the LED and servo signals do not come from the UBEC). One port
+  # per load, so every wing load has its own pair from the UBEC to the DB-25 (no sharing).
+  # Orient each plug so S/+/- are not swapped (the UBEC drawing shows the correct orientation).
+  # 12 V UBEC ports 1 to 4: servos (2.2 A burst, 1.3 A stall, 0.7 A rated each; port limit 3.3 A).
+  # 5 V UBEC ports 1 to 6: LEDs (0.8 A peak, 1 A max each).
+  # Port 5 and 6 of the 12 V UBEC: port 5 is the camera (cellular_system.yaml), port 6 is spare.
+  # TODO: servo plug housing series and part number (crimp contacts, wire range; 22 AWG is the plan)
+  # and whether the contacts take 3 A.
+  UBEC12_SRV1:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "12 V UBEC servo port 1: left wing servo 1 (12 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC12_SRV2:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "12 V UBEC servo port 2: left wing servo 2 (12 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC12_SRV3:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "12 V UBEC servo port 3: right wing servo 1 (12 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC12_SRV4:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "12 V UBEC servo port 4: right wing servo 2 (12 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC5_LED1:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "5 V UBEC servo port 1: left wing LED 1 (5 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC5_LED2:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "5 V UBEC servo port 2: left wing LED 2 (5 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC5_LED3:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "5 V UBEC servo port 3: left wingtip LED (5 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC5_LED4:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "5 V UBEC servo port 4: right wing LED 1 (5 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC5_LED5:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "5 V UBEC servo port 5: right wing LED 2 (5 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  UBEC5_LED6:
+    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "5 V UBEC servo port 6: right wingtip LED (5 V and GND). S not wired."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  # ---- Cube Orange+ AUX OUT: ESC signals (DShot) -----------------------------------------------
+  # The Cube AUX OUT 1 to 6 and MAIN OUT 1 to 8 are 2.54 mm (0.1 inch) male pin headers, three rows:
+  # ground on top, power in the middle, signal at the bottom (Cube pin label S, +, -). They accept
+  # standard DuPont female housings. AUX OUT is on the FMU, so it can do DShot (MAIN OUT, on the IO
+  # MCU, is PWM only), which is why the motors are on AUX. Motor n sits on AUX n (ArduPilot Quad X
+  # default order): AUX 1 front right, AUX 2 rear left, AUX 3 front left, AUX 4 rear right, and the
+  # forward-thrust motor on AUX 5.
+  # One 3-pin housing per port, only signal and ground wired. The middle (power) slot stays EMPTY: the
+  # ESCs have no BEC output and the Cube servo rail must not be fed from here.
+  # TODO: DuPont housing part number and crimp contacts; orient each plug so signal is on the
+  # signal row (bottom row in the Cube pin picture). The ESC telemetry (T) wire is not wired at either
+  # end, so the ESC telemetry path (a serial port on the Cube) is still open.
+  FC_AUX1:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ AUX OUT 1: VTOL motor 1 (front right) ESC signal. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_AUX2:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ AUX OUT 2: VTOL motor 2 (rear left) ESC signal. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_AUX3:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ AUX OUT 3: VTOL motor 3 (front left) ESC signal. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_AUX4:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ AUX OUT 4: VTOL motor 4 (rear right) ESC signal. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_AUX5:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ AUX OUT 5: forward-thrust motor ESC signal. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  # ---- Cube Orange+ MAIN OUT: LED PWM ------------------------------------------------------------
+  # The LEDs (StrobeIT-Pro and StrobeIT, servo-style PWM input) are on MAIN OUT 1 to 6, which is
+  # plain servo PWM from the IO MCU, enough for an LED. MAIN OUT 7 and 8 stay free. Same 2.54 mm
+  # headers and DuPont housings as the AUX ports above (signal bottom row, power middle, ground
+  # top): only signal and ground are wired, the power slot stays EMPTY (the LEDs are powered from
+  # the 5 V UBEC, never from the Cube header).
+  # Mapping: MAIN 1 left LED 1, MAIN 2 left LED 2, MAIN 3 left wingtip LED, MAIN 4 right LED 1,
+  # MAIN 5 right LED 2, MAIN 6 right wingtip LED.
+  # Ground: the Cube ground wire lands on the same DB-25 LEDn_GND pin as the UBEC return wire (the
+  # StrobeIT datasheet says connect GND to the flight controller). The UBEC wire takes the LED
+  # current; the Cube wire is only the signal reference. The wing carries one GND wire per LED.
+  # NOTE: the LEDs could share if needed. They likely all get the same command, so one MAIN output
+  # could drive several of them (or all six) through a split. Kept at one output per LED for now (no
+  # sharing).
+  # TODO: what the StrobeIT expects (on/off threshold or pattern selection by pulse width) before
+  # setting the ArduPilot output function; DuPont housing part numbers; the DB-25 contact must take
+  # two wires on the LED ground pins.
+  FC_MAIN1:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ MAIN OUT 1: left wing LED 1 PWM. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_MAIN2:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ MAIN OUT 2: left wing LED 2 PWM. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_MAIN3:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ MAIN OUT 3: left wingtip LED PWM. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_MAIN4:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ MAIN OUT 4: right wing LED 1 PWM. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_MAIN5:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ MAIN OUT 5: right wing LED 2 PWM. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+  FC_MAIN6:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ MAIN OUT 6: right wingtip LED PWM. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
 
 
 cables:
@@ -752,7 +942,8 @@ cables:
 
   # Fuselage side: DB-25 socket CAN_H, CAN_L and GND of each servo -> its own port on the CAN
   # splitter (GH housing pins 2, 3, 4). No 5 V (pin 1 stays empty), see the splitter warnings in
-  # the connectors section. The servo power (12 V) is not wired on the fuselage side yet.
+  # the connectors section. The servo power (12 V) and the LED power (5 V) are wired on the fuselage
+  # side further down (W_ACT_42 to W_ACT_51), from the servo ports of the two KDE UBECs.
   # Colors: CAN_H yellow, CAN_L green, GND black. Twist CAN_H with CAN_L.
   W_ACT_28:
     wirecount: 3
@@ -778,6 +969,155 @@ cables:
     colors: [YE, GN, BK]
     length: 0   # TODO: real length after layout analysis (fuselage DB-25 to splitter)
     notes: "Right wing servo 2 CAN_H, CAN_L and GND, fuselage DB-25 to CAN splitter (twist CAN_H/CAN_L)"
+
+  # Fuselage side power: KDE UBEC servo ports -> DB-25 socket. 22 AWG (2.2 A servo burst, 0.8 A LED
+  # peak), the same heavier wire as the LED wing cables, and short (UBEC to the DB-25 in the
+  # fuselage). The wing side is 26 AWG for the servos (W_ACT_10 and following) and 22 AWG for the
+  # LEDs. Colors: red = positive, black = ground.
+  # TODO: the DB-25 contact must take 22 AWG (see the DB-25 TODO), real lengths after layout.
+  W_ACT_42:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "12 V UBEC servo port 1 to left wing servo 1 power (12 V and GND), fuselage DB-25"
+  W_ACT_43:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "12 V UBEC servo port 2 to left wing servo 2 power (12 V and GND), fuselage DB-25"
+  W_ACT_44:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "12 V UBEC servo port 3 to right wing servo 1 power (12 V and GND), fuselage DB-25"
+  W_ACT_45:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "12 V UBEC servo port 4 to right wing servo 2 power (12 V and GND), fuselage DB-25"
+  W_ACT_46:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "5 V UBEC servo port 1 to left wing LED 1 power (5 V and GND), fuselage DB-25"
+  W_ACT_47:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "5 V UBEC servo port 2 to left wing LED 2 power (5 V and GND), fuselage DB-25"
+  W_ACT_48:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "5 V UBEC servo port 3 to left wingtip LED power (5 V and GND), fuselage DB-25"
+  W_ACT_49:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "5 V UBEC servo port 4 to right wing LED 1 power (5 V and GND), fuselage DB-25"
+  W_ACT_50:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "5 V UBEC servo port 5 to right wing LED 2 power (5 V and GND), fuselage DB-25"
+  W_ACT_51:
+    wirecount: 2
+    gauge: 22 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (UBEC to fuselage DB-25)
+    notes: "5 V UBEC servo port 6 to right wingtip LED power (5 V and GND), fuselage DB-25"
+
+  # Cube AUX OUT -> ESC signal and signal ground, one cable per motor: two wires, signal white and
+  # ground black, twisted together all the way (APD: twist the signal with its ground). Four go to
+  # the fuselage DB-25 and continue through the wing cable (W_ACT_17, W_ACT_18, W_ACT_26, W_ACT_27);
+  # the fifth goes straight to the forward ESC. 26 AWG matches the wing side and fits DuPont
+  # contacts (typically 22 to 28 AWG).
+  # Long run: fuselage to DB-25, then 26 AWG up to the boom, a few metres in total. DShot has little
+  # margin on long runs (edge rate), so the protocol is a decision for later: DShot150 or DShot300, or
+  # fall back to PWM or Oneshot if the signal is not clean.
+  # TODO: real lengths after layout; check the protocols the APD 120F3 accepts and the maximum
+  # cable length; shielding if noisy.
+  W_ACT_52:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube AUX 1 to VTOL motor 1 (front right) ESC signal and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_53:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube AUX 2 to VTOL motor 2 (rear left) ESC signal and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_54:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube AUX 3 to VTOL motor 3 (front left) ESC signal and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_55:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube AUX 4 to VTOL motor 4 (rear right) ESC signal and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_56:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to forward ESC, in the fuselage)
+    notes: "Cube AUX 5 to forward ESC signal and ground (twisted pair)"
+
+  # Cube MAIN OUT -> LED PWM and signal ground, one cable per LED: signal white, ground black. The
+  # signal is slow servo PWM and carries almost no current, so 26 AWG is plenty and the run length
+  # does not matter the way it does for DShot. The ground wire joins the UBEC return on the DB-25
+  # LEDn_GND pin (see the MAIN OUT comment). Twist the pair.
+  # TODO: real lengths after layout.
+  W_ACT_57:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube MAIN 1 to left wing LED 1 PWM and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_58:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube MAIN 2 to left wing LED 2 PWM and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_59:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube MAIN 3 to left wingtip LED PWM and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_60:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube MAIN 4 to right wing LED 1 PWM and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_61:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube MAIN 5 to right wing LED 2 PWM and ground, fuselage DB-25 (twisted pair)"
+  W_ACT_62:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to fuselage DB-25)
+    notes: "Cube MAIN 6 to right wingtip LED PWM and ground, fuselage DB-25 (twisted pair)"
 
   # ---- ESC input capacitors: direct capacitor legs soldered to the ESC pads ----------------
   # These are not real cables: the capacitor's own legs go straight onto the exposed copper of the
@@ -945,6 +1285,50 @@ connections:
     - SPLIT_L_FUS: [SRV2_CANH, SRV2_CANL, SRV2_GND]
     - W_ACT_29: [1, 2, 3]
     - CAN_SPL_P3: [CAN_H, CAN_L, GND]
+  # Fuselage side power, left wing: 12 V UBEC ports 1 and 2 (servos), 5 V UBEC ports 1 to 3 (LEDs).
+  -
+    - UBEC12_SRV1: [V_POS, GND]
+    - W_ACT_42: [1, 2]
+    - SPLIT_L_FUS: [SRV1_VPOS, SRV1_GND]
+  -
+    - UBEC12_SRV2: [V_POS, GND]
+    - W_ACT_43: [1, 2]
+    - SPLIT_L_FUS: [SRV2_VPOS, SRV2_GND]
+  -
+    - UBEC5_LED1: [V_POS, GND]
+    - W_ACT_46: [1, 2]
+    - SPLIT_L_FUS: [LED1_5V, LED1_GND]
+  -
+    - UBEC5_LED2: [V_POS, GND]
+    - W_ACT_47: [1, 2]
+    - SPLIT_L_FUS: [LED2_5V, LED2_GND]
+  -
+    - UBEC5_LED3: [V_POS, GND]
+    - W_ACT_48: [1, 2]
+    - SPLIT_L_FUS: [LEDT_5V, LEDT_GND]
+  # Fuselage side ESC signal, left wing: Cube AUX 3 (motor 3, ESC 1 forward boom) and AUX 2 (motor 2, ESC 2 aft boom).
+  -
+    - FC_AUX3: [S, GND]
+    - W_ACT_54: [1, 2]
+    - SPLIT_L_FUS: [ESC1_S, ESC1_SGND]
+  -
+    - FC_AUX2: [S, GND]
+    - W_ACT_53: [1, 2]
+    - SPLIT_L_FUS: [ESC2_S, ESC2_SGND]
+  # Fuselage side LED PWM, left wing: Cube MAIN 1 to 3. The ground lands on the LEDn_GND pin that
+  # already has the UBEC return.
+  -
+    - FC_MAIN1: [S, GND]
+    - W_ACT_57: [1, 2]
+    - SPLIT_L_FUS: [LED1_SIG, LED1_GND]
+  -
+    - FC_MAIN2: [S, GND]
+    - W_ACT_58: [1, 2]
+    - SPLIT_L_FUS: [LED2_SIG, LED2_GND]
+  -
+    - FC_MAIN3: [S, GND]
+    - W_ACT_59: [1, 2]
+    - SPLIT_L_FUS: [LEDT_SIG, LEDT_GND]
 
   # Right wing
   -
@@ -1003,6 +1387,56 @@ connections:
     - SPLIT_R_FUS: [SRV2_CANH, SRV2_CANL, SRV2_GND]
     - W_ACT_31: [1, 2, 3]
     - CAN_SPL_P5: [CAN_H, CAN_L, GND]
+  # Fuselage side power, right wing: 12 V UBEC ports 3 and 4 (servos), 5 V UBEC ports 4 to 6 (LEDs).
+  -
+    - UBEC12_SRV3: [V_POS, GND]
+    - W_ACT_44: [1, 2]
+    - SPLIT_R_FUS: [SRV1_VPOS, SRV1_GND]
+  -
+    - UBEC12_SRV4: [V_POS, GND]
+    - W_ACT_45: [1, 2]
+    - SPLIT_R_FUS: [SRV2_VPOS, SRV2_GND]
+  -
+    - UBEC5_LED4: [V_POS, GND]
+    - W_ACT_49: [1, 2]
+    - SPLIT_R_FUS: [LED1_5V, LED1_GND]
+  -
+    - UBEC5_LED5: [V_POS, GND]
+    - W_ACT_50: [1, 2]
+    - SPLIT_R_FUS: [LED2_5V, LED2_GND]
+  -
+    - UBEC5_LED6: [V_POS, GND]
+    - W_ACT_51: [1, 2]
+    - SPLIT_R_FUS: [LEDT_5V, LEDT_GND]
+  # Fuselage side ESC signal, right wing: Cube AUX 1 (motor 1, ESC 1 forward boom) and AUX 4 (motor 4, ESC 2 aft boom).
+  -
+    - FC_AUX1: [S, GND]
+    - W_ACT_52: [1, 2]
+    - SPLIT_R_FUS: [ESC1_S, ESC1_SGND]
+  -
+    - FC_AUX4: [S, GND]
+    - W_ACT_55: [1, 2]
+    - SPLIT_R_FUS: [ESC2_S, ESC2_SGND]
+  # Fuselage side LED PWM, right wing: Cube MAIN 4 to 6.
+  -
+    - FC_MAIN4: [S, GND]
+    - W_ACT_60: [1, 2]
+    - SPLIT_R_FUS: [LED1_SIG, LED1_GND]
+  -
+    - FC_MAIN5: [S, GND]
+    - W_ACT_61: [1, 2]
+    - SPLIT_R_FUS: [LED2_SIG, LED2_GND]
+  -
+    - FC_MAIN6: [S, GND]
+    - W_ACT_62: [1, 2]
+    - SPLIT_R_FUS: [LEDT_SIG, LEDT_GND]
+
+  # Forward-thrust motor: Cube AUX 5 straight to the forward ESC signal pads (no wing split). The
+  # telemetry pad (T) is not wired.
+  -
+    - FC_AUX5: [S, GND]
+    - W_ACT_56: [1, 2]
+    - ESC_FWD_SIG: [S, SIG_GND]
 
   # ==== ESC input capacitors (2 per ESC, from the ESC box) ==================================
   # Both capacitors of an ESC sit on the same pad pair (in parallel). The capacitor legs are

@@ -16,6 +16,10 @@ connectors:
 
   # Harness-side plug that mates with the PDB's 6-pin JST-GH output (board part SM06B-GHS-TB).
   # The PDB board is defined in power_system.yaml; only its output plug appears here.
+  # This is the PDB 5 V BEC (4 A continuous, shared bus): it powers only the Cube and what hangs off
+  # it (GPS, airspeed, LiDAR, about 3 A in the conservative estimate), so the flight controller is
+  # isolated from the radio and the LED strobes on the 5 V UBEC. The radio, LEDs, servos, camera and
+  # Jetson are on the two KDE UBECs (power_system.yaml).
   PDB_FC_PWR:
     type: JST GH 6-pin plug housing
     subtype: female

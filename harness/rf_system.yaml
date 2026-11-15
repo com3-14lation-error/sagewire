@@ -1,7 +1,8 @@
 # RF system harness (work in progress)
 # Scope: Doodle Labs Mesh Rider Mini (RM-1400-42M3, tag AIR): UART link from the Cube telemetry
 # port, the 5 V power port, the Ethernet port and the two antenna ports. The UART link and the
-# Ethernet link (RJ45 into the Jetson second Ethernet port) are wired; power and antennas are not.
+# Ethernet link (RJ45 into the Jetson second Ethernet port) are wired, and so is the 5 V power
+# (HP leads of the 5 V KDE UBEC); the antennas are not.
 # USB device, USB host and GPIO ports are not used.
 #
 # Port layout (datasheet, Doodle Labs mini-OEM connector descriptions): ports 1, 2, 3, 5 and 6 are
@@ -48,9 +49,11 @@ connectors:
   # Radio port 4, 5 V power: pins 1, 2, 3 are 5 V input and 4, 5, 6 are GND. All six pins must be
   # used: one GH contact is only rated 1 A, and the radio draws about 5 W average and 8 W peak
   # (about 1.6 A at 5 V). Supply is 5 V +/- 5 %.
-  # Not wired yet: the BEC is not decided. The mating housing is a 6-pin GHR-06V-S.
-  # TODO: when the BEC is chosen, tie the three 5 V wires together and the three GND wires
-  # together at the housing, and add a bulk capacitor close to the connector.
+  # Fed from the HP output leads of the 5 V KDE UBEC (RF_UBEC_HP, cable W_RF_03): three wires per
+  # polarity, joined to the single UBEC lead at the UBEC end. The mating housing is a 6-pin GHR-06V-S.
+  # Supply tolerance is 5 V +/- 5 % (4.75 to 5.25 V): voltage drop on the run to the radio eats most
+  # of that, see W_RF_03. 6 V is out of spec for the radio.
+  # TODO: add a bulk capacitor close to the connector.
   RF_P4:
     type: JST GH 6-pin plug housing
     subtype: female
@@ -58,6 +61,17 @@ connectors:
     mpn: GHR-06V-S
     notes: "Mesh Rider Mini port 4 (5 V power), mates with SM6B-GHS-TB. Crimp contacts SSHL-002T-P0.2. Use all six pins."
     pinlabels: [5V_1, 5V_2, 5V_3, GND_4, GND_5, GND_6]
+
+  # 5 V KDE UBECUVC high-current (HP) output leads: yellow (+), black (-), 16 AWG, about 210 mm,
+  # pre-tinned ends. Rated 10 A continuous through the leads. The radio is the only load on them
+  # (1.6 A peak); the wing LEDs are on the servo ports (actuators_system.yaml). The three radio
+  # wires per polarity are soldered or spliced onto the single UBEC lead.
+  # TODO: splice method (solder and heat-shrink, or a small terminal block).
+  RF_UBEC_HP:
+    type: UBEC high-current output lead ends (pre-tinned)
+    notes: "5 V KDE UBECUVC HP output: yellow (+), black (-). 10 A continuous. Radio is the only load."
+    pinlabels: [HP_POS, HP_NEG]
+    ignore_in_bom: true
 
   # Radio port 2, Ethernet (100 Base-T): pin 1 ETH1_RX_N, 2 ETH1_RX_P, 3 ETH1_TX_N, 4 ETH1_TX_P
   # (directions are from the radio's side). Wired to an RJ45 plug (RF_RJ45 below), which plugs into
@@ -143,6 +157,20 @@ cables:
     length: 0   # TODO: real length after layout analysis
     notes: "Radio Ethernet port 2 to RJ45 plug. Two twisted pairs, crossover wiring (see comments)."
 
+  # 5 V UBEC HP output -> radio port 4 (five volt power), six wires: three 5 V and three GND, because
+  # one GH contact is only rated 1 A and the radio draws 1.6 A peak. 26 AWG is the thickest wire a GH
+  # contact takes (26 to 30 AWG). Three wires in parallel are about 0.045 ohm per metre per side, so
+  # a 1.5 m run (3 m loop) drops about 0.2 V at 1.6 A, against a 0.25 V budget (5 V -5 % is
+  # 4.75 V). Too tight if the run is longer: keep the 5 V UBEC close to the radio (forward), or
+  # cut the run, or set the UBEC output to its upper tolerance.
+  # TODO: real length after layout; check the drop at the radio connector with a meter.
+  W_RF_03:
+    wirecount: 6
+    gauge: 26 AWG
+    colors: [RD, RD, RD, BK, BK, BK]
+    length: 0   # TODO: real length after layout analysis
+    notes: "5 V UBEC HP leads to radio port 4. Wires 1 to 3 = 5 V (red), 4 to 6 = GND (black)."
+
 connections:
 
   # Cube TELEM -> radio port 3 (UART). Cube TX goes to the radio RX and Cube RX to the radio TX.
@@ -161,4 +189,10 @@ connections:
     - -->
     - JET_ETH2: [1, 2, 3, 6]
 
-  # Not wired yet: RF_P4 (5 V, BEC not decided) and RF_ANT0 / RF_ANT1.
+  # 5 V UBEC HP leads -> radio port 4. The UBEC lead is used three times per polarity (spliced
+  # joint), same idiom as the camera power cable W_CEL_04.
+  - - RF_UBEC_HP: [HP_POS, HP_POS, HP_POS, HP_NEG, HP_NEG, HP_NEG]
+    - W_RF_03: [1, 2, 3, 4, 5, 6]
+    - RF_P4: [5V_1, 5V_2, 5V_3, GND_4, GND_5, GND_6]
+
+  # Not wired yet: RF_ANT0 / RF_ANT1.

@@ -16,4 +16,11 @@ One YAML file per system in `harness/`. Render one with:
 wireviz -f hpst -o build harness\power_system.yaml
 ```
 
+Or use the helper, which renders everything (or just the named harnesses) into `build/`:
+
+```
+python scripts/render.py
+python scripts/render.py power rf --open
+```
+
 Needs Graphviz on the PATH. In pin lists, quote labels that YAML would read as booleans (`"NO"`, `"ON"`, `"Y"`).
