@@ -1,0 +1,161 @@
+# Actuators system harness, forward-thrust motor (work in progress)
+# Scope: the forward-thrust ESC (APD 120F3, same as the VTOL ESCs) and motor (Vector Technics VT4130
+# 300KV, 18 inch propeller): signal from Cube AUX OUT 5, input capacitors and motor phase leads. The
+# ESC battery input is wired to the PDB in power_system.yaml (ESC_FWD_IN). There is no wing split.
+# The wing actuators were split out of this file: the left wing (VTOL motors 3 and 2, servos, LEDs)
+# is in actuators_left_wing_system.yaml and the right wing (VTOL motors 1 and 4, servos, LEDs) in
+# actuators_right_wing_system.yaml. Cable IDs (W_ACT_nn) are unchanged.
+#
+# Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
+# Gauges and colors are recommendations, see the comment above each cable.
+
+metadata:
+  title: Actuators system, forward thrust
+  description: Forward-thrust ESC and motor, Cube AUX 5 signal
+
+connectors:
+
+  # --- Forward-thrust ESC (APD 120F3, same as the VTOL ESCs) ---------------------------
+  # Battery input pads are in power_system.yaml (ESC_FWD_IN). Same pad layout as the VTOL ESCs (see
+  # the wing files). All connections are solder pads, so there is nothing to buy on the ESC side.
+  # Capacitors: APD says that if the ESC is more than 12 cm from the power source an additional
+  # capacitor is needed on top of the included ones; the value and voltage of the included ones are
+  # not in the APD docs (TODO: read the markings, then decide the extra capacitors).
+  # Signal pads (top to bottom: T, S, -). T = telemetry out, S = signal in (PWM), - = signal ground.
+  ESC_FWD_SIG:
+    type: Solder pads
+    notes: "Forward ESC signal pads: T telemetry out, S signal in, GND signal ground"
+    pinlabels: [T, S, SIG_GND]
+    ignore_in_bom: true
+
+  # Capacitor pads (+ and -). The two capacitors from the ESC box are soldered straight onto them
+  # with their own legs (CAP_FWD_A and CAP_FWD_B); same capacitor notes as the VTOL ESCs apply.
+  ESC_FWD_CAP:
+    type: Solder pads
+    notes: "Forward ESC capacitor pads, + and -. Observe polarity."
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  # Motor phase pads on the forward ESC. Same notes as the VTOL ESCs: any pad order works, and
+  # swapping two phase wires reverses the spin direction. Pad labels are synthetic.
+  ESC_FWD_PH:
+    type: Solder pads
+    notes: "Forward ESC motor phase pads"
+    pinlabels: [PH_A, PH_B, PH_C]
+    ignore_in_bom: true
+
+  # Forward-thrust motor: Vector Technics VT4130 300KV, 18 inch propeller. The three phase leads
+  # exit the motor body and are modelled as cable W_ACT_09.
+  # TODO: lead length, gauge and any connector are not known; check the Vector Technics datasheet or
+  # the motor. The test data is for a smaller propeller; the 18 inch propeller draws more current
+  # (agreed with the vendor), expected to be similar to the VTOL motors.
+  MOT_FWD:
+    type: Motor (three-phase leads exit the body)
+    manufacturer: Vector Technics
+    notes: "Forward motor: VT4130 300KV, 18 inch propeller"
+    pinlabels: [PH_A, PH_B, PH_C]
+    ignore_in_bom: true
+
+  CAP_FWD_A:
+    type: Electrolytic capacitor (spec not known)
+    notes: "Forward ESC input capacitor 1 of 2, from the ESC box"
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  CAP_FWD_B:
+    type: Electrolytic capacitor (spec not known)
+    notes: "Forward ESC input capacitor 2 of 2, from the ESC box"
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  # ---- Cube Orange+ AUX OUT: ESC signals (DShot) -----------------------------------------------
+  # The Cube AUX OUT 1 to 6 and MAIN OUT 1 to 8 are 2.54 mm (0.1 inch) male pin headers, three rows:
+  # ground on top, power in the middle, signal at the bottom (Cube pin label S, +, -). They accept
+  # standard DuPont female housings. AUX OUT is on the FMU, so it can do DShot (MAIN OUT, on the IO
+  # MCU, is PWM only), which is why the motors are on AUX. Motor n sits on AUX n (ArduPilot Quad X
+  # default order): AUX 1 front right, AUX 2 rear left, AUX 3 front left, AUX 4 rear right, and the
+  # forward-thrust motor on AUX 5.
+  # One 3-pin housing per port, only signal and ground wired. The middle (power) slot stays EMPTY: the
+  # ESCs have no BEC output and the Cube servo rail must not be fed from here.
+  # TODO: DuPont housing part number and crimp contacts; orient each plug so signal is on the
+  # signal row (bottom row in the Cube pin picture). The ESC telemetry (T) wire is not wired at either
+  # end, so the ESC telemetry path (a serial port on the Cube) is still open.
+  FC_AUX5:
+    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    subtype: female
+    notes: "Cube Orange+ AUX OUT 5: forward-thrust motor ESC signal. Signal and ground only, power slot empty."
+    pinlabels: [S, V_POS, GND]
+    hide_disconnected_pins: true
+
+cables:
+
+  # Forward ESC motor phase pads -> forward motor. The motor's own leads, so out of the BOM.
+  # Gauge, colors and length are not known. If the leads are ever extended, use 10 AWG (the phase
+  # current is about the same as the battery current). Colors only tell the ends apart.
+  # TODO: real colors, gauge and length from the motor.
+  W_ACT_09:
+    wirecount: 3
+    colors: [YE, GN, BU]
+    length: 0   # TODO: real length (motor leads, as short as possible)
+    ignore_in_bom: true
+    notes: "Forward motor phase leads"
+
+  # Cube AUX OUT -> ESC signal and signal ground, one cable per motor: two wires, signal white and
+  # ground black, twisted together all the way (APD: twist the signal with its ground). Four go to
+  # the fuselage DB-25 and continue through the wing cable (AUX 1 to 4, in the wing files); the
+  # fifth, here, goes straight to the forward ESC. 26 AWG matches the wing side and fits DuPont
+  # contacts (typically 22 to 28 AWG).
+  # This run is short (inside the fuselage), so DShot margin is less of a worry than for the wing
+  # runs; the protocol is still a decision for later (DShot150 or DShot300, or fall back to PWM or
+  # Oneshot if the signal is not clean).
+  # TODO: real lengths after layout; check the protocols the APD 120F3 accepts and the maximum
+  # cable length; shielding if noisy.
+  W_ACT_56:
+    wirecount: 2
+    gauge: 26 AWG
+    colors: [WH, BK]
+    length: 0   # TODO: real length after layout analysis (Cube to forward ESC, in the fuselage)
+    notes: "Cube AUX 5 to forward ESC signal and ground (twisted pair)"
+
+  # ---- ESC input capacitors: direct capacitor legs soldered to the ESC pads ----------------
+  # These are not real cables: the capacitor's own legs go straight onto the exposed copper of the
+  # ESC capacitor pads, so nothing goes in the BOM. Colors only tell the legs apart (red = positive,
+  # the longer leg; black = negative, the grey stripe side). Keep the legs as short as possible and
+  # fold them close to the body (APD).
+  # TODO: real leg length (a few mm).
+  W_ACT_40:
+    wirecount: 2
+    colors: [RD, BK]
+    length: 0
+    ignore_in_bom: true
+    notes: "Direct capacitor legs soldered: forward ESC, capacitor 1 of 2"
+  W_ACT_41:
+    wirecount: 2
+    colors: [RD, BK]
+    length: 0
+    ignore_in_bom: true
+    notes: "Direct capacitor legs soldered: forward ESC, capacitor 2 of 2"
+
+connections:
+
+  # Forward ESC motor phase pads -> forward motor.
+  - - ESC_FWD_PH: [PH_A, PH_B, PH_C]
+    - W_ACT_09: [1, 2, 3]
+    - MOT_FWD: [PH_A, PH_B, PH_C]
+
+  # Forward-thrust motor: Cube AUX 5 straight to the forward ESC signal pads (no wing split). The
+  # telemetry pad (T) is not wired.
+  -
+    - FC_AUX5: [S, GND]
+    - W_ACT_56: [1, 2]
+    - ESC_FWD_SIG: [S, SIG_GND]
+
+  # ==== ESC input capacitors (2 per ESC, from the ESC box) ==================================
+  # Both capacitors sit on the same pad pair (in parallel). The capacitor legs are soldered directly
+  # to the ESC pads, see the W_ACT_40 and W_ACT_41 comment.
+  - - CAP_FWD_A: [CAP_POS, CAP_NEG]
+    - W_ACT_40: [1, 2]
+    - ESC_FWD_CAP: [CAP_POS, CAP_NEG]
+  - - CAP_FWD_B: [CAP_POS, CAP_NEG]
+    - W_ACT_41: [1, 2]
+    - ESC_FWD_CAP: [CAP_POS, CAP_NEG]

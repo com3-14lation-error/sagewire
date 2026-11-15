@@ -2,7 +2,7 @@
 # Scope so far: PDB -> Cube Orange+ power link, and two DroneCAN links:
 # Cube CAN1 -> Sierra PrecisionPoint-Pro GPS (CAN1.1), with the airspeed sensor daisy-chained
 # behind it (GPS CAN1.2 -> airspeed sensor), and Cube CAN2 -> port 1 of the passive CAN splitter
-# (the servo branches, ports 2 to 5, are in actuators_system.yaml).
+# (the servo branches, ports 2 to 5, are in actuators_left_wing_system.yaml and actuators_right_wing_system.yaml).
 # The LightWare GRF-500 LiDAR is wired to the Cube GPS2 port (UART8, SERIAL4 in ArduPilot).
 # ServoBoard and the other signals come later.
 #
@@ -59,7 +59,7 @@ connectors:
     pinlabels: [VCC, CAN_H, CAN_L, GND]
 
   # Cube Orange+ CAN2: passive CAN splitter port 1, which feeds the four servos (ports 2 to 5 are in
-  # actuators_system.yaml). Only CAN_H, CAN_L and GND are wired; the 5 V pin stays empty, because
+  # the two wing actuator files). Only CAN_H, CAN_L and GND are wired; the 5 V pin stays empty, because
   # the splitter bus 5 V pin is not used by the servo branches.
   FC_CAN2:
     type: JST GH 4-pin
@@ -71,7 +71,7 @@ connectors:
     hide_disconnected_pins: true
 
   # CAN splitter port 1 (SwiftWing 6-port passive splitter, JST-GH 4-pin ports, all ports bussed).
-  # The other ports are in actuators_system.yaml (CAN_SPL_P2 to P5). The splitter has no
+  # The other ports are in the two wing actuator files (CAN_SPL_P2 to P5). The splitter has no
   # termination and no isolation. Same pin order on every port: 1 +5 V, 2 CAN_H, 3 CAN_L, 4 GND.
   # TODO: GH housing part number and contact type (GHR-04V-S with SSHL-002T-P0.2 for 26 AWG), and
   # confirm that the splitter ports are SM04B-GHS-TB headers.
@@ -185,7 +185,7 @@ cables:
     notes: "Cube GPS2 to GRF-500 (serial). Wires: 1 5 V, 2 sensor TXD to Cube RX, 3 Cube TX to sensor RXD, 4 GND."
 
   # Cube CAN2 -> CAN splitter port 1: CAN_H, CAN_L and GND (no 5 V). Keep CAN_H and CAN_L twisted.
-  # The splitter servo branches are far over the 0.3 m stub rule (see actuators_system.yaml).
+  # The splitter servo branches are far over the 0.3 m stub rule (see the two wing actuator files).
   W_FC_05:
     wirecount: 3
     gauge: 26 AWG

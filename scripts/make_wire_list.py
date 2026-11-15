@@ -1,6 +1,11 @@
+"""Generate docs/wire_list.md from harness/*.yaml.
+
+Usage: python scripts/make_wire_list.py [repo_root]   (default: the repo this script is in)
+Needs PyYAML (in the project venv).
+"""
 import yaml, glob, os, sys
 
-root = sys.argv[1]
+root = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 C = {}
 def c(ids, text):
     for i in ids:

@@ -23,4 +23,6 @@ python scripts/render.py
 python scripts/render.py power rf --open
 ```
 
+The actuators are split into three files: `actuators_left_wing_system.yaml`, `actuators_right_wing_system.yaml` and `actuators_frw_system.yaml` (forward-thrust motor). `python scripts/make_wire_list.py` regenerates `docs/wire_list.md` from all the harnesses.
+
 Needs Graphviz on the PATH. In pin lists, quote labels that YAML would read as booleans (`"NO"`, `"ON"`, `"Y"`).

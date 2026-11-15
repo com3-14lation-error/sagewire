@@ -5,9 +5,9 @@
 #
 # BEC architecture (current decision): two KDE UBECUVC, both on PDB ESC pads (battery bus).
 #   - 12 V UBEC (ESC7 pads): Jetson (HP leads), SIYI camera (servo port 5), the four wing servos
-#     (servo ports 1 to 4). Outputs are wired in cellular_system.yaml and actuators_system.yaml.
+#     (servo ports 1 to 4). Outputs are wired in cellular_system.yaml and the two wing actuator files.
 #   - 5 V UBEC (ESC8 pads): Mesh Rider radio (HP leads, rf_system.yaml) and the six wing LEDs (servo
-#     ports 1 to 6, actuators_system.yaml). 5 V for now; the final voltage (5 V or 6 V) is open, see
+#     ports 1 to 6, the two wing actuator files). 5 V for now; the final voltage (5 V or 6 V) is open, see
 #     the note on UBEC5_IN.
 #   - PDB on-board BECs: the 5 V BEC only feeds the Cube through the PDB 6-pin output (and the Cube
 #     peripherals: GPS, airspeed, LiDAR). The PDB 12 V BEC is not used.
@@ -154,7 +154,7 @@ connectors:
 
   # Forward-thrust ESC (APD 120F3, same ESC as the VTOL motors), battery input pads (+ and -).
   # It sits in the fuselage, so it is wired straight from the PDB pads with no wing split.
-  # Its signal, capacitor and motor phase pads are in actuators_system.yaml. Pin IDs are synthetic.
+  # Its signal, capacitor and motor phase pads are in actuators_frw_system.yaml. Pin IDs are synthetic.
   ESC_FWD_IN:
     type: Solder pads
     notes: "Forward ESC battery input, + and -"
@@ -165,7 +165,7 @@ connectors:
   # PDB on-board BEC header (J3, 2x7): four 5 V and three 12 V outputs. None of them is wired here:
   # the Cube is powered from the PDB 6-pin output (the PDB 5 V BEC, see flight_control_system.yaml)
   # and the other loads are on the two KDE UBECs (outputs modelled in cellular_system.yaml,
-  # actuators_system.yaml and rf_system.yaml). The PDB 12 V BEC is unused (4 A continuous, 5 A peak
+  # the wing actuator files and rf_system.yaml). The PDB 12 V BEC is unused (4 A continuous, 5 A peak
   # per BEC, all outputs of one voltage share one bus). Kept commented out for reference.
   # Un-comment it if a load is ever wired to this header.
   #
@@ -218,7 +218,7 @@ cables:
     notes: "Capacitor leads, short as possible"
 
   # PDB ESC pads -> XT90 female at the wing split, one cable per VTOL motor.
-  # 10 AWG (recommendation), same as the wing side (W_ACT_01 to W_ACT_04 in actuators_system.yaml).
+  # 10 AWG (recommendation), same as the wing side (W_ACT_01 to W_ACT_04 in the two wing actuator files).
   # Motor current is about 16 A at 6 kg thrust and about 75-80 A at full throttle (Vector Technics
   # 8020 PRO 120KV test table, 12S), so 10 AWG silicone wire is enough for a short run. Check that
   # it fits the PDB solder pads and the XT90 solder cups.

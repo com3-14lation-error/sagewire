@@ -64,7 +64,7 @@ connectors:
 
   # 5 V KDE UBECUVC high-current (HP) output leads: yellow (+), black (-), 16 AWG, about 210 mm,
   # pre-tinned ends. Rated 10 A continuous through the leads. The radio is the only load on them
-  # (1.6 A peak); the wing LEDs are on the servo ports (actuators_system.yaml). The three radio
+  # (1.6 A peak); the wing LEDs are on the servo ports (the two wing actuator files). The three radio
   # wires per polarity are soldered or spliced onto the single UBEC lead.
   # TODO: splice method (solder and heat-shrink, or a small terminal block).
   RF_UBEC_HP:
