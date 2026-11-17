@@ -8,7 +8,7 @@ description, unit, manufacturer and MPN are merged (quantities added, designator
 names listed), and the result is written to the build folder as
 
     bom.html   the page for GitHub Pages (parts, connectors and wire, with totals)
-    bom.csv    the same lines as a flat file (opens in a spreadsheet)
+    sage_avionics_bom.csv    the same lines as a flat file (opens in a spreadsheet)
 
 Wire lengths are still placeholders (0 m) until the layout analysis, so the wire quantities are 0.
 A warning is printed if a BOM file is older than its harness file (render again).
@@ -121,7 +121,7 @@ def to_html(items: list[dict]) -> str:
     body = ["<h1>Consolidated BOM</h1>",
             "<p>Every harness BOM merged: lines with the same description, manufacturer and MPN "
             "are added together. The per-harness lists are the BOM tables on each harness page. "
-            '<a href="bom.csv">Download as CSV</a>.</p>',
+            '<a href="sage_avionics_bom.csv" download="sage_avionics_bom.csv">Download as CSV</a>.</p>',
             f'<p class="muted">{counts["Parts"]} part lines, {counts["Connectors"]} connector '
             f'lines, {counts["Wire"]} wire lines. <span class="warn">{no_mpn} part and connector '
             "lines have no MPN yet</span> (series-only or not chosen); wire lengths are all "
@@ -152,9 +152,9 @@ def main(argv=None) -> int:
               file=sys.stderr)
     items = consolidate(lines)
     (build / "bom.html").write_text(to_html(items), encoding="utf-8", newline="\n")
-    (build / "bom.csv").write_text(to_csv(items), encoding="utf-8", newline="\n")
+    (build / "sage_avionics_bom.csv").write_text(to_csv(items), encoding="utf-8", newline="\n")
     print(f"{len(items)} BOM lines from {len(lines)} harness lines -> "
-          f"{build / 'bom.html'} and {build / 'bom.csv'}")
+          f"{build / 'bom.html'} and {build / 'sage_avionics_bom.csv'}")
     return 0
 
 

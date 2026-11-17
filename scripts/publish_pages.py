@@ -6,7 +6,7 @@
 Run `python scripts/render.py`, then `python scripts/make_bom.py` and
 `.venv/Scripts/python scripts/make_wire_list.py` first (clear build/ beforehand for a clean set).
 The branch holds one commit per publication, each a snapshot of: every harness `*.html` in the
-build folder, the reports (`bom.html`, `bom.csv`, `wire_list.html`), an `index.html` that lists
+build folder, the reports (`bom.html`, `sage_avionics_bom.csv`, `wire_list.html`), an `index.html` that lists
 the reports first and then the harness pages by file name, and a `.nojekyll`. The first commit has no parent;
 later ones sit on top of the previous tip, so the push is always a fast-forward and nothing is
 ever force-pushed. Nothing is pushed unless `--push` is given; GitHub Pages itself is switched
@@ -38,7 +38,7 @@ INDEX = "index.html"
 REPORTS = (
     ("bom.html", "Bill of materials (all harnesses)"),
     ("wire_list.html", "Wire list"),
-    ("bom.csv", "Bill of materials as CSV"),
+    ("sage_avionics_bom.csv", "Bill of materials as CSV"),
 )
 REPORT_NAMES = tuple(n for n, _ in REPORTS)
 EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.IGNORECASE)  # http:, data:, mailto:, //host

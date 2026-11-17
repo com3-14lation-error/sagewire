@@ -52,7 +52,7 @@ Reports and the GitHub Pages site (`index.html` lists the BOM and the wire list 
 
 ```
 python scripts/render.py                                  # harness pages and per-harness BOMs into build/
-python scripts/make_bom.py                                # consolidated BOM: build/bom.html and build/bom.csv
+python scripts/make_bom.py                                # consolidated BOM: build/bom.html and build/sage_avionics_bom.csv
 .venv/Scripts/python scripts/make_wire_list.py            # wire list: build/wire_list.html (and docs/wire_list.md)
 python scripts/publish_pages.py --push                    # publish build/ to the gh-pages branch
 ```
