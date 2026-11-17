@@ -4,16 +4,16 @@
 # Jetson Ethernet port) and the power port (4 wires -> XT30 male, mated to an XT30 female that is
 # fed from servo port 5 of the same 12 V UBEC).
 # Only the A8-MINI Ethernet and Power ports are used; the Gimbal Control (S.BUS) port is not wired.
-# Also: two Waveshare 5G dongles to the Jetson over USB 2.0 (D+, D-, GND and VBUS, so the Jetson USB
-# ports power them for now; they may move to a BEC in a later draft).
 # Also: the Cube TELEM2 UART link to the Jetson, through a TTL-to-USB converter that plugs into the
 # Jetson USB 2.0 jack.
+# The two Waveshare 5G dongles (USB links to the Jetson) are in cellular_dongles_system.yaml, and
+# the version powered from the 5 V UBEC is in alternatives/cellular_dongles_bec5v_system.yaml.
 #
 # Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
 
 metadata:
   title: Cellular system
-  description: Jetson power input, SIYI camera Ethernet link and two Waveshare 5G dongles on USB 2.0, Cube TELEM2 UART link to the Jetson through a TTL-to-USB converter
+  description: Jetson power input, SIYI camera Ethernet link, Cube TELEM2 UART link to the Jetson through a TTL-to-USB converter
 
 # Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM).
 additional_bom_items:
@@ -37,27 +37,6 @@ additional_bom_items:
     designators: A8M
     manufacturer: SIYI
     mpn: A8 mini
-
-  # 5G: two Waveshare USB to M.2 Key B dongle boards, each with a 5G modem in it. The board kit comes
-  # without the modem; it includes the aluminium case, four antennas, four IPEX cables and a USB 3.0
-  # extension cable (Waveshare listing, SKU 23252).
-  # Modem: Telit Cinterion FN990A28-HP (Snapdragon X62, 5G sub-6 FDD and TDD, SA and NSA, M.2 Key B
-  # 30 x 52 mm, power class 1.5 on n78). Chosen for Airtel (NSA) and Jio (SA) in India: it covers n78
-  # and n28 and the LTE anchor bands. The modem choice is open between FN990A28 / A28-HP / A40 /
-  # A40-HP / B40, see the comparison given with this change.
-  # TODO: confirm the model, the exact Telit ordering code, EN-DC band combinations for Airtel and
-  # SA support on Jio n28 / n78 with Telit, and that the Waveshare board works with a Telit module
-  # (it lists SIMCom, Quectel and Fibocom modules only).
-  - description: 5G dongle board, USB to M.2 Key B (modem not included)
-    qty: 2
-    designators: [WAV1, WAV2]
-    manufacturer: Waveshare
-    mpn: USB TO M.2 B KEY
-  - description: 5G modem, M.2 Key B (30 x 52 mm)
-    qty: 2
-    designators: [WAV1_MOD, WAV2_MOD]
-    manufacturer: Telit Cinterion
-    mpn: FN990A28-HP
 
   # Cube TELEM2 to Jetson: USB to TTL converter, model to be chosen. Needs 3.3 V logic.
   # TODO: exact model (UART connector, USB plug type, logic level).
@@ -210,77 +189,10 @@ connectors:
     pinlabels: [TX+, TX-, RX+, NC, NC, RX-, NC, NC]
     ignore_in_bom: true
 
-  # ---- Waveshare 5G dongles (tag WAV, two of them) -> Jetson, USB 2.0 only -------------------
-  # Dongle: Waveshare 5G dongle board with an onboard USB 3.1 Type-A plug (from the photo).
-  # Jetson: Waveshare Orin Nano/NX base board, 4 Type-A jacks (3 USB 3.2, 1 USB 2.0).
-  # Both dongles are wired USB 2.0 only (D+, D-, GND). The SuperSpeed pins stay unwired, so the
-  # link runs at 480 Mbit/s. The dongle's USB 3 plug still fits a USB 2.0 jack.
-  # Each dongle has a female jack on our extension (dongle side) and a male plug (Jetson side). Both
-  # are USB Type-A breakout boards (a female breakout board and a male breakout board, wires to their
-  # terminals or pads), so wire gauge is not limited by a solder cup.
-  # VBUS (5 V) IS wired for now (first draft): the dongle is powered from the Jetson USB jack and
-  # needs about 2 A. WARNING: a normal USB Type-A contact is rated about 1.5 A and Waveshare gives no
-  # per-port current limit for the base board, so two 2 A dongles may brown out the Jetson USB ports.
-  # In a later draft the dongles get their own 5 V BEC (the 5 V KDE would then be near 10 A peak).
-  # TODO: check the real per-port limit on the base board and measure the dongle draw.
-  # USB Type-A pin order: 1 VBUS, 2 D-, 3 D+, 4 GND, 5 SSRX-, 6 SSRX+, 7 GND_DRAIN, 8 SSTX-, 9 SSTX+.
-  # TODO: part numbers for the breakout boards, and whether the cable is shielded.
-  WAV1_USB:
-    type: USB 3.x Type-A plug
-    subtype: male
-    notes: "Plug on Waveshare dongle 1. Pins 1 to 4 are wired (VBUS plus USB 2.0 data and GND). The dongle is powered from pin 1 (VBUS), about 2 A."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
-    ignore_in_bom: true
-
-  WAV1_EXT_F:
-    type: USB Type-A female breakout board   # TODO: part number
-    subtype: female
-    notes: "Female breakout board on our extension, dongle 1 plugs into it. A USB 3 plug fits a USB 2.0 jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  WAV1_EXT_M:
-    type: USB Type-A male breakout board   # TODO: part number
-    subtype: male
-    notes: "Male breakout board on our extension, goes into the Jetson USB jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  JET_USB1:
-    type: USB Type-A jack (Jetson base board)
-    subtype: female
-    notes: "Jetson base board USB-A jack for dongle 1. TODO: which jack (3 are USB 3.2, 1 is USB 2.0)."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
-    ignore_in_bom: true
-
-  WAV2_USB:
-    type: USB 3.x Type-A plug
-    subtype: male
-    notes: "Plug on Waveshare dongle 2. Pins 1 to 4 are wired (VBUS plus USB 2.0 data and GND). The dongle is powered from pin 1 (VBUS), about 2 A."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
-    ignore_in_bom: true
-
-  WAV2_EXT_F:
-    type: USB Type-A female breakout board   # TODO: part number
-    subtype: female
-    notes: "Female breakout board on our extension, dongle 2 plugs into it. A USB 3 plug fits a USB 2.0 jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  WAV2_EXT_M:
-    type: USB Type-A male breakout board   # TODO: part number
-    subtype: male
-    notes: "Male breakout board on our extension, goes into the Jetson USB jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  JET_USB2:
-    type: USB Type-A jack (Jetson base board)
-    subtype: female
-    notes: "Jetson base board USB-A jack for dongle 2. TODO: which jack (3 are USB 3.2, 1 is USB 2.0)."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
-    ignore_in_bom: true
-
   # ---- Cube TELEM2 -> TTL-to-USB converter -> Jetson USB 2.0 jack (MAVLink telemetry link) ------
   # The Cube telemetry port TELEM2 is wired to a TTL-to-USB converter board, which plugs straight
   # into the Jetson's USB 2.0 jack (the one USB 2.0 Type-A jack on the base board; the other three
-  # are USB 3.2, and the two 5G dongles use those, see the TODOs on JET_USB1 and JET_USB2).
+  # are USB 3.2, and the two 5G dongles use those, see JET_USB1 and JET_USB2 in cellular_dongles_system.yaml).
   # The radio's own UART is on TELEM1 (rf_system.yaml).
   # TODO: part numbers for everything in this link (Cube plug, converter, jack), not chosen yet.
   #
@@ -354,28 +266,6 @@ cables:
     length: 0   # TODO: set after layout
     ignore_in_bom: true
     notes: "A8-MINI power port to XT30 male. Wires 1, 2 = power (red), 3, 4 = GND (black)."
-
-  # Dongle 1 to Jetson. Standard USB 2.0 colours: red = VBUS, white = D-, green = D+, black = GND.
-  # Keep D- and D+ twisted together. VBUS and GND carry the dongle current (about 2 A), so the
-  # whole cable is 22 AWG (one gauge per cable); 22 AWG is oversized for the data pair but fine for
-  # USB 2.0 over a short run. At 2 A, 22 AWG drops about 0.1 V per metre of cable (supply plus return).
-  # The ends are USB Type-A breakout boards, so the 22 AWG wire is not limited by a solder cup.
-  # TODO: cable type and shield, length after layout.
-  W_CEL_02:
-    wirecount: 4
-    gauge: 22 AWG
-    colors: [RD, WH, GN, BK]
-    length: 0   # TODO: set after layout
-    notes: "USB 2.0 power (VBUS), data and ground for dongle 1, powered from the Jetson USB jack."
-
-  # Dongle 2 to Jetson. Same as W_CEL_02: red = VBUS, white = D-, green = D+, black = GND.
-  # TODO: same checks as W_CEL_02.
-  W_CEL_03:
-    wirecount: 4
-    gauge: 22 AWG
-    colors: [RD, WH, GN, BK]
-    length: 0   # TODO: set after layout
-    notes: "USB 2.0 power (VBUS), data and ground for dongle 2, powered from the Jetson USB jack."
 
   # 12 V UBEC HP output -> Jetson power input (XT30). These are the UBEC's own factory leads (16 AWG,
   # yellow/black, about 210 mm), so they stay out of the BOM; keep 16 AWG if they are extended.
@@ -478,34 +368,6 @@ connections:
     - JET_XT30_M: [POS, NEG]
     - W_CEL_08: [1, 2]
     - JET_PWR: [VIN, GND]
-
-  # Dongle 1: dongle plug mates with our jack, the cable runs to our plug, which mates with the Jetson jack.
-  -
-    - WAV1_EXT_F: [1, 2, 3, 4]     # VBUS, D-, D+, GND
-    - W_CEL_02: [1, 2, 3, 4]
-    - WAV1_EXT_M: [1, 2, 3, 4]
-  -
-    - WAV1_USB: [1, 2, 3, 4]
-    - -->
-    - WAV1_EXT_F: [1, 2, 3, 4]
-  -
-    - WAV1_EXT_M: [1, 2, 3, 4]
-    - -->
-    - JET_USB1: [1, 2, 3, 4]
-
-  # Dongle 2: dongle plug mates with our jack, the cable runs to our plug, which mates with the Jetson jack.
-  -
-    - WAV2_EXT_F: [1, 2, 3, 4]     # VBUS, D-, D+, GND
-    - W_CEL_03: [1, 2, 3, 4]
-    - WAV2_EXT_M: [1, 2, 3, 4]
-  -
-    - WAV2_USB: [1, 2, 3, 4]
-    - -->
-    - WAV2_EXT_F: [1, 2, 3, 4]
-  -
-    - WAV2_EXT_M: [1, 2, 3, 4]
-    - -->
-    - JET_USB2: [1, 2, 3, 4]
 
   # Cube TELEM2 -> TTL-to-USB converter. Cube TX goes to the converter RXD and Cube RX to the
   # converter TXD (crossover, as for any UART link).

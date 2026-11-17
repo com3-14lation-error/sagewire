@@ -7,7 +7,8 @@ Run `python scripts/render.py`, then `python scripts/make_bom.py` and
 `.venv/Scripts/python scripts/make_wire_list.py` first (clear build/ beforehand for a clean set).
 The branch holds one commit per publication, each a snapshot of: every harness `*.html` in the
 build folder, the reports (`bom.html`, `sage_avionics_bom.csv`, `wire_list.html`), an `index.html` that lists
-the reports first and then the harness pages by file name, and a `.nojekyll`. The first commit has no parent;
+the reports first, then the harness pages by file name, then the alternatives (harness/alternatives/,
+rendered to build/alternatives/ and published under alternatives/), and a `.nojekyll`. The first commit has no parent;
 later ones sit on top of the previous tip, so the push is always a fast-forward and nothing is
 ever force-pushed. Nothing is pushed unless `--push` is given; GitHub Pages itself is switched
 on by hand (Settings, Pages, branch, root).
@@ -34,6 +35,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 INDEX = "index.html"
+ALT = "alternatives"  # folder of alternative designs: harness/alternatives, build/alternatives
 # Reports written by make_bom.py and make_wire_list.py: (file, title shown on the index page).
 REPORTS = (
     ("bom.html", "Bill of materials (all harnesses)"),
@@ -112,6 +114,20 @@ def collect(build: Path, harness: Path) -> list[str]:
     return pages
 
 
+def collect_alternatives(build: Path, harness: Path) -> list[str]:
+    """The alternative pages (as `alternatives/<name>.html`), checked against harness/alternatives."""
+    folder = build / ALT
+    pages = sorted(f"{ALT}/{p.name}" for p in folder.glob("*.html")) if folder.is_dir() else []
+    wanted = {f"{ALT}/{y.stem}.html" for y in (harness / ALT).glob("*.yaml")}
+    problems = [f"{n}: no page (run `python scripts/render.py`)" for n in sorted(wanted - set(pages))]
+    problems += [f"{n}: no harness/{n[:-5]}.yaml any more (clear build/ and render again)"
+                 for n in sorted(set(pages) - wanted)]
+    if problems:
+        raise PublishError("build/alternatives does not match harness/alternatives:\n  "
+                           + "\n  ".join(problems))
+    return pages
+
+
 def stale(build: Path, harness: Path, pages: Sequence[str]) -> list[str]:
     """Pages older than their harness file, reports older than the newest harness file."""
     out = [n for n in pages
@@ -121,11 +137,18 @@ def stale(build: Path, harness: Path, pages: Sequence[str]) -> list[str]:
     return out
 
 
-def index_page(pages: Sequence[str], commit: str, date: str) -> str:
+def index_page(pages: Sequence[str], alternatives: Sequence[str], commit: str, date: str) -> str:
     reports = "\n".join(f'    <li><a href="{html.escape(n)}">{html.escape(t)}</a></li>'
                         for n, t in REPORTS)
     items = "\n".join(f'    <li><a href="{html.escape(n)}">{html.escape(n)}</a></li>'
                       for n in pages)
+    alts = ""
+    if alternatives:
+        alt_items = "\n".join(f'    <li><a href="{html.escape(n)}">{html.escape(n)}</a></li>'
+                              for n in alternatives)
+        alts = ("<h2>Alternatives</h2>\n<p><small>Other designs for part of a harness. They are not "
+                "in the bill of materials or the wire list.</small></p>\n"
+                f"<ul>\n{alt_items}\n</ul>\n")
     return (
         "<!doctype html>\n"
         '<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -140,18 +163,22 @@ def index_page(pages: Sequence[str], commit: str, date: str) -> str:
         f"<ul>\n{reports}\n</ul>\n"
         "<h2>Harnesses</h2>\n"
         f"<ul>\n{items}\n</ul>\n"
+        f"{alts}"
         f"<p><small>Built from commit {html.escape(commit)}, {html.escape(date)}.</small></p>\n"
         "</body>\n</html>\n")
 
 
 # -------------------------------------------------------------------------------------- the branch
-def stage(build: Path, pages: Sequence[str], commit: str, date: str, dest: Path) -> list[str]:
+def stage(build: Path, pages: Sequence[str], alternatives: Sequence[str], commit: str, date: str,
+          dest: Path) -> list[str]:
     """Copy the pages into `dest` byte for byte, add index.html and .nojekyll; return all names."""
-    for name in (*pages, *REPORT_NAMES):
+    for name in (*pages, *alternatives, *REPORT_NAMES):
+        (dest / name).parent.mkdir(parents=True, exist_ok=True)
         (dest / name).write_bytes((build / name).read_bytes())
-    (dest / INDEX).write_text(index_page(pages, commit, date), encoding="utf-8", newline="\n")
+    (dest / INDEX).write_text(index_page(pages, alternatives, commit, date), encoding="utf-8",
+                              newline="\n")
     (dest / ".nojekyll").write_text("", encoding="utf-8")
-    return sorted({*pages, *REPORT_NAMES, INDEX, ".nojekyll"})
+    return sorted({*pages, *alternatives, *REPORT_NAMES, INDEX, ".nojekyll"})
 
 
 def missing_links(staging: Path, files: Sequence[str]) -> list[str]:
@@ -204,18 +231,19 @@ def publish(
         raise PublishError("tracked files have uncommitted changes, so the page could not be "
                            "traced to a commit: commit them, or pass --allow-dirty")
     pages = collect(build, repo / "harness")
+    alternatives = collect_alternatives(build, repo / "harness")
     commit = git(repo, "rev-parse", "--short", "HEAD")
     date = git(repo, "show", "-s", "--format=%cs", "HEAD")
     parent = tip(repo, branch, remote, fetch=not dry_run)
     with tempfile.TemporaryDirectory() as tmp:
         staging = Path(tmp)
-        files = stage(build, pages, commit, date, staging)
+        files = stage(build, pages, alternatives, commit, date, staging)
         gone = missing_links(staging, files)
         if gone:
             raise PublishError("links to files that would not be on the branch (they would "
                                "404):\n  " + "\n  ".join(gone))
         info = {"branch": branch, "files": str(len(files)), "commit": "",
-                "stale": ", ".join(stale(build, repo / "harness", pages))}
+                "stale": ", ".join(stale(build, repo / "harness", [*pages, *alternatives]))}
         if dry_run:
             info["parent"] = parent
             return info

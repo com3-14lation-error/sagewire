@@ -1,11 +1,12 @@
 """Render the WireViz harnesses to build/.
 
 Usage (from anywhere):
-    python scripts/render.py                 render every harness/*.yaml
+    python scripts/render.py                 render every harness/*.yaml and harness/alternatives/*.yaml
     python scripts/render.py power rf        render only some (name, name_system or file name)
     python scripts/render.py --open power    render, then open the PNG (Windows, macOS, Linux)
 
-Output goes to build/ (git-ignored): <name>.png, .svg, .html and .tsv (the BOM).
+Output goes to build/ (git-ignored): <name>.png, .svg, .html and .tsv (the BOM). The alternatives
+(harness/alternatives/) go to build/alternatives/, so the consolidated BOM does not see them.
 Needs Graphviz on the PATH. Uses the wireviz in .venv if there is one, else the one on the PATH.
 """
 import argparse
@@ -17,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HARNESS = ROOT / "harness"
+ALTERNATIVES = HARNESS / "alternatives"
 BUILD = ROOT / "build"
 
 
@@ -29,7 +31,7 @@ def find_wireviz():
 
 
 def pick_files(names):
-    files = sorted(HARNESS.glob("*.yaml"))
+    files = sorted(HARNESS.glob("*.yaml")) + sorted(ALTERNATIVES.glob("*.yaml"))
     if not names:
         return files
     chosen = []
@@ -67,12 +69,14 @@ def main():
     BUILD.mkdir(exist_ok=True)
     failed = []
     for f in pick_files(args.names):
-        print(f"== {f.name}")
-        r = subprocess.run([wireviz, "-f", "hpst", "-o", str(BUILD), str(f)])
+        out = BUILD / "alternatives" if f.parent == ALTERNATIVES else BUILD
+        out.mkdir(exist_ok=True)
+        print(f"== {f.relative_to(HARNESS)}")
+        r = subprocess.run([wireviz, "-f", "hpst", "-o", str(out), str(f)])
         if r.returncode != 0:
             failed.append(f.name)
         elif args.open:
-            open_file(str(BUILD / (f.stem + ".png")))
+            open_file(str(out / (f.stem + ".png")))
 
     if failed:
         sys.exit("Failed: " + ", ".join(failed))

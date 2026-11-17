@@ -19,7 +19,7 @@ Open design items. The detail for each one is in the `TODO:` comments of the har
 5. Servo CAN termination (?): confirm by measuring whether the Zeus servos have a built-in 120 ohm. Also the far end of the CAN1 bus (airspeed sensor).
 6. DB-25 fix (model, shell, contacts, hood, final pin map) and M5 plug fix (part number, contacts, current rating).
 7. RF voltage drop: the radio 5 V supply (W_RF_03) has almost no margin at 1.5 m and fails at 2 m. Extend the 16 AWG UBEC leads close to the radio and split into the 26 AWG tails, or shorten the run.
-8. GSM module power: the two 5G dongles are powered from the Jetson USB ports for now (about 2 A each, over the port rating). Move them to a BEC.
+8. GSM module power: the two 5G dongles are powered from the Jetson USB ports for now (about 2 A each, over the port rating). Move them to a BEC: the alternative powered from the 5 V UBEC HP leads is in `harness/alternatives/cellular_dongles_bec5v_system.yaml`. Measure the dongle draw and the 5 V UBEC total (about 10.4 A peak) before choosing it.
 9. GSM and RF antennas not fixed (eight 5G antennas for the two dongles, two MMCX antennas for the radio).
 10. VTOL motor power gauge: 10 AWG against about 80 A design current. 8 AWG is under consideration (check that it fits the XT90 cups and PDB pads, or move to XT150/AS150).
 11. ESC voltage margin: a 12S pack is 50.4 V at full charge, the ESC maximum and the capacitor rating are 50 V.
@@ -47,6 +47,10 @@ python scripts/render.py power rf --open
 ```
 
 The actuators are split into seven files: for each wing a motors file (`actuators_left_motors_system.yaml`, `actuators_right_motors_system.yaml`: power chain, ESCs, motors, capacitors), a wing-side file (`actuators_left_wing_system.yaml`, `actuators_right_wing_system.yaml`: DB-25 plug, servos, LEDs, ESC signal pads) and a fuselage-side file (`actuators_left_fuselage_system.yaml`, `actuators_right_fuselage_system.yaml`: DB-25 socket, UBEC ports, Cube AUX and MAIN, CAN splitter ports), plus `actuators_frw_system.yaml` (forward-thrust motor). `python scripts/make_wire_list.py` regenerates `docs/wire_list.md` from all the harnesses.
+
+The cellular system is split into `cellular_system.yaml` (Jetson power, camera, Cube TELEM2 link) and `cellular_dongles_system.yaml` (the two 5G dongles on the Jetson USB jacks, powered from the Jetson for now).
+
+`harness/alternatives/` holds other designs for part of a harness, for comparison (today: `cellular_dongles_bec5v_system.yaml`, the dongles powered from the 5 V UBEC). They are rendered to `build/alternatives/` and listed under "Alternatives" on the Pages index, but they are not in the consolidated BOM or the wire list. Name an alternative after the file it replaces. If one is chosen, move it over the main file.
 
 Reports and the GitHub Pages site (`index.html` lists the BOM and the wire list first, then each harness):
 
