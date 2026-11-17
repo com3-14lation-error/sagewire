@@ -1,4 +1,4 @@
-"""Turn the Fusion mesh export (docs/harness_layout/_cad/tris_xy.f32 + index.json) into top-view
+"""Turn the Fusion mesh export (harness/harness_layout/_cad/tris_xy.f32 + index.json) into top-view
 vector outlines (mm, aircraft axes) grouped by part. Output: _cad/topview_layers.json
 Silhouettes: triangles rasterised (0.5-1 mm grid), traced with contourpy, simplified (Douglas-Peucker)."""
 import json, re, sys
@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 import contourpy
 
-CAD = Path(__file__).resolve().parent.parent / "docs" / "harness_layout" / "_cad"
+CAD = Path(__file__).resolve().parent.parent / "harness" / "harness_layout" / "_cad"
 idx = json.load(open(CAD / "index.json"))
 tri = np.fromfile(CAD / "tris_xy.f32", dtype=np.float32).reshape(-1, 3, 2)
 

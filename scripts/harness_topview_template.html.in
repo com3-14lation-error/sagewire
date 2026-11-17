@@ -157,7 +157,7 @@ window.addEventListener("error", e => { const b = document.getElementById("err")
 </script>
 <script>
 const DATA = /*__DATA__*/null;
-if (!DATA) { document.body.innerHTML = '<div style="font:15px system-ui;padding:40px;max-width:640px">This is the <b>template</b>, not the drawing.<br><br>Open <b>sagewire/docs/harness_layout/sage_harness_topview.html</b> instead, or rebuild it with <code>python scripts/build_harness_topview_html.py</code>.</div>'; throw new Error("template opened"); }
+if (!DATA) { document.body.innerHTML = '<div style="font:15px system-ui;padding:40px;max-width:640px">This is the <b>template</b>, not the drawing.<br><br>Open <b>sagewire/harness/harness_layout/sage_harness_topview.html</b> instead, or rebuild it with <code>python scripts/build_harness_topview_html.py</code>.</div>'; throw new Error("template opened"); }
 const NS = "http://www.w3.org/2000/svg";
 const svg = document.getElementById("v");
 const $ = id => document.getElementById(id);

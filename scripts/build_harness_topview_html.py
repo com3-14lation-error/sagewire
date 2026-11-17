@@ -1,4 +1,4 @@
-"""Build docs/harness_layout/sage_harness_topview.html - interactive, pure-vector top view of SAGE
+"""Build harness/harness_layout/sage_harness_topview.html - interactive, pure-vector top view of SAGE
 with every harness cable routed to its device. CAD outlines come from the Fusion master
 (_cad/topview_layers.json, made by cad_topview_extract.py). Drawing is 1:1 in mm (uniform scale).
 Axes: X aft, Y right (SVG x = Y, SVG y = X, so the nose points up). Run: python scripts/build_harness_topview_html.py"""
@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "docs" / "harness_layout"
+OUT = ROOT / "harness" / "harness_layout"
 CAD = json.load(open(OUT / "_cad" / "topview_layers.json"))
 
 # ------------------------------------------------------------------ devices (from SAGE_Master v100)
