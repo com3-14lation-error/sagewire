@@ -1,0 +1,280 @@
+# Right wing motors harness (work in progress)
+# Scope: the VTOL motor power chain of the right wing: VTOL motor 1 (front right, ESC 1, forward
+# boom) and VTOL motor 4 (rear right, ESC 2, aft boom). XT90 male on the wing
+# side of the wing split, APD 120F3 ESC (battery input, motor phase and capacitor pads), Vector
+# Technics 8020 PRO 120KV motor and the ESC input capacitors. Motor numbers follow the ArduPilot
+# Quad X default.
+# Not here: the ESC signal pads (T, S, signal ground), they are in actuators_right_wing_system.yaml. The
+# fuselage side of the motor power (PDB ESC pads -> XT90 female) lives in power_system.yaml.
+# The rest of the right wing: actuators_right_wing_system.yaml (DB-25 plug, servos, LEDs, ESC signal
+# pads)
+# and actuators_right_fuselage_system.yaml (DB-25 socket, UBEC ports, Cube AUX and MAIN, CAN splitter
+# ports). The left wing is in actuators_left_*_system.yaml and the forward-thrust motor in
+# actuators_frw_system.yaml. Cable IDs (W_ACT_nn) are the same as in the old single file.
+#
+# Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
+# Gauges and colors are recommendations, see the comment above each cable.
+
+metadata:
+  title: Actuators system, right wing motors
+  description: Right wing VTOL motors 1 and 4, XT90 (wing side), ESCs, motors, input capacitors
+
+# Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM).
+additional_bom_items:
+
+  # VTOL motors: Vector Technics 8020 PRO 120KV, one per VTOL arm.
+  # TODO: Vector Technics part number.
+  - description: Motor, 8020 PRO 120KV (VTOL)
+    qty: 2
+    designators: [MOT_VTOL1, MOT_VTOL4]
+    manufacturer: Vector Technics
+
+  # ESCs: same APD 120F3[X]v2 as the forward thrust motor (see actuators_frw_system.yaml for the
+  # specification summary, including the 50 V maximum against the 50.4 V pack).
+  - description: ESC, 120F3[X]v2
+    qty: 2
+    designators: [ESC_VTOL1, ESC_VTOL4]
+    manufacturer: APD
+    mpn: "100785"
+
+  # Decoupling capacitors from the ESC boxes, same as the forward ESC: 330 uF 50 V electrolytic.
+  # TODO: the APD table says one per ESC, this harness models two per ESC. Fix the count together
+  # with actuators_frw_system.yaml.
+  - description: Capacitor, electrolytic 330 uF 50 V (supplied with the ESC)
+    qty: 4
+    designators: [CAP_VTOL1_A, CAP_VTOL1_B, CAP_VTOL4_A, CAP_VTOL4_B]
+
+connectors:
+
+  # Wing split, wing side: one XT90 male per VTOL motor ESC. It mates with the XT90 female
+  # in power_system.yaml (XT90_VTOL{n}_F). Synthetic pin IDs; the housing is keyed, so polarity
+  # cannot be reversed.
+  # Variant: plain XT90 (no anti-spark), decided. It must match the female side. XT90 is rated for 90 A
+  # continuous: check against the real ESC peak current.
+  XT90_VTOL1_M:
+    type: XT90 male (plain)
+    subtype: male
+    manufacturer: Amass
+    notes: "VTOL motor 1 (front right) power, wing split (wing side)"
+    pinlabels: [POS, NEG]
+
+  XT90_VTOL4_M:
+    type: XT90 male (plain)
+    subtype: male
+    manufacturer: Amass
+    notes: "VTOL motor 4 (rear right) power, wing split (wing side)"
+    pinlabels: [POS, NEG]
+
+  # ESC: APD 120F3 (120 A rating), one per VTOL motor. All its connections are solder pads, so
+  # there is nothing to buy on the ESC side; the harness wires are soldered straight to the pads.
+  # The board has three groups of pads, modelled as three connectors per ESC. Pin IDs are
+  # synthetic (pads have no numbers), in label order.
+  # TODO: the pad picture was of the F3[X] board; confirm the 120F3 pad layout is the same.
+  # Capacitors: each 120F3 box has 2 input capacitors (not installed), modelled further down as
+  # CAP_xxx_A and CAP_xxx_B. APD says that if the ESC is more than 12 cm from the power source an
+  # additional capacitor is needed on top of the included ones (2 or 3 extra for high current;
+  # Panasonic FM/FS or Rubycon ZLJ). The wing ESCs will be over 12 cm (wing split).
+  # The included capacitor is 330 uF 50 V (APD specification table, see additional_bom_items).
+  # TODO: decide the extra capacitors for the long input leads.
+  #
+  # Battery input pads (+ and -, the two large pads).
+  ESC_VTOL1_IN:
+    type: Solder pads
+    notes: "VTOL motor 1 (front right) ESC battery input, + and -"
+    pinlabels: [IN_POS, IN_NEG]
+    ignore_in_bom: true
+
+  ESC_VTOL4_IN:
+    type: Solder pads
+    notes: "VTOL motor 4 (rear right) ESC battery input, + and -"
+    pinlabels: [IN_POS, IN_NEG]
+    ignore_in_bom: true
+
+  # Motor phase pads on the ESC (three pads). Sensorless motor, so the three phases can go to any
+  # pad: swapping any two phase wires reverses the spin direction (APD also has a motor reverse
+  # solder tab). Pad labels are synthetic.
+  # TODO: check the real pad labels on the 120F3 board and set the spin direction per motor.
+  ESC_VTOL1_PH:
+    type: Solder pads
+    notes: "VTOL motor 1 (front right) ESC motor phase pads"
+    pinlabels: [PH_A, PH_B, PH_C]
+    ignore_in_bom: true
+
+  ESC_VTOL4_PH:
+    type: Solder pads
+    notes: "VTOL motor 4 (rear right) ESC motor phase pads"
+    pinlabels: [PH_A, PH_B, PH_C]
+    ignore_in_bom: true
+
+  # Vector Technics 8020 PRO 120KV motor, one per VTOL arm. The three phase leads exit the motor
+  # body and are modelled as cable W_ACT_05 and W_ACT_08 here, so nothing goes in the BOM for them.
+  # TODO: lead length, gauge and any connector on the leads are not in the seller listing; check
+  # the Vector Technics datasheet or the motor itself.
+  MOT_VTOL1:
+    type: Motor (three-phase leads exit the body)
+    manufacturer: Vector Technics
+    notes: "VTOL motor 1 (front right, CCW): 8020 PRO 120KV, 12S, 50 A (180 s) maximum continuous per the seller listing"
+    pinlabels: [PH_A, PH_B, PH_C]
+    ignore_in_bom: true
+
+  MOT_VTOL4:
+    type: Motor (three-phase leads exit the body)
+    manufacturer: Vector Technics
+    notes: "VTOL motor 4 (rear right, CW): 8020 PRO 120KV, 12S, 50 A (180 s) maximum continuous per the seller listing"
+    pinlabels: [PH_A, PH_B, PH_C]
+    ignore_in_bom: true
+
+  # Capacitor pads (+ and -, marked "Capacitor Mounting Position" on the board, at the top edge).
+  # The two capacitors from the ESC box are soldered straight onto these pads with their own legs
+  # (CAP_VTOL1_A and CAP_VTOL1_B, both on the same pad pair, in parallel). Extra capacitors for
+  # the long input leads are not added yet.
+  ESC_VTOL1_CAP:
+    type: Solder pads
+    notes: "VTOL motor 1 (front right) ESC capacitor pads, + and -. Observe polarity."
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  ESC_VTOL4_CAP:
+    type: Solder pads
+    notes: "VTOL motor 4 (rear right) ESC capacitor pads, + and -. Observe polarity."
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  # ---- ESC input capacitors from the box (2 per ESC) -----------------------------------
+  # Each APD 120F3 ships with input capacitors, not installed (modelled as 2, see the count TODO in
+  # additional_bom_items). 330 uF 50 V each. They are listed in additional_bom_items, so the
+  # connectors here stay out of the BOM.
+  # Polarity: the positive leg is the longer one, the negative side has the grey stripe on the body.
+  # Legs as short as possible (APD).
+  CAP_VTOL1_A:
+    type: Electrolytic capacitor 330 uF 50 V
+    notes: "VTOL motor 1 (front right) ESC input capacitor 1 of 2, from the ESC box"
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  CAP_VTOL1_B:
+    type: Electrolytic capacitor 330 uF 50 V
+    notes: "VTOL motor 1 (front right) ESC input capacitor 2 of 2, from the ESC box"
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  CAP_VTOL4_A:
+    type: Electrolytic capacitor 330 uF 50 V
+    notes: "VTOL motor 4 (rear right) ESC input capacitor 1 of 2, from the ESC box"
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+  CAP_VTOL4_B:
+    type: Electrolytic capacitor 330 uF 50 V
+    notes: "VTOL motor 4 (rear right) ESC input capacitor 2 of 2, from the ESC box"
+    pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true
+
+cables:
+
+  # XT90 male at the wing split -> ESC battery input, one cable per VTOL motor.
+  # 10 AWG (recommendation). Motor current is about 16 A at 6 kg thrust and about 75-80 A at full
+  # throttle (Vector Technics 8020 PRO 120KV test table, 12S, 30-32 inch props); battery-side
+  # current is about the same. 10 AWG silicone wire handles that over a short run and fits the XT90
+  # solder cup. APD says to keep the ESC input wires short (long wires cause voltage spikes
+  # when the motor brakes); see the capacitor note on the ESC connectors.
+  # TODO: confirm with real lengths; go to 8 AWG if the run is long or hot.
+  W_ACT_01:
+    wirecount: 2
+    gauge: 10 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (wing split to ESC)
+    notes: "VTOL motor 1 (front right) power, wing split to ESC"
+  W_ACT_04:
+    wirecount: 2
+    gauge: 10 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis (wing split to ESC)
+    notes: "VTOL motor 4 (rear right) power, wing split to ESC"
+
+  # ESC motor phase pads -> motor. These are the motor's own leads, so they stay out of the BOM.
+  # Gauge and colors are not in the listing; leave the gauge open until the motor is checked.
+  # The phase current is roughly the same as the battery current, so if the leads are ever
+  # extended, use the same gauge as the cables above (10 AWG). Colors below only tell the ends
+  # apart. Phase order does not matter electrically (it sets the spin direction).
+  # TODO: real colors, gauge and length from the motor.
+  W_ACT_05:
+    wirecount: 3
+    colors: [YE, GN, BU]
+    length: 0   # TODO: real length (motor leads, as short as possible)
+    ignore_in_bom: true
+    notes: "VTOL motor 1 (front right) phase leads"
+  W_ACT_08:
+    wirecount: 3
+    colors: [YE, GN, BU]
+    length: 0   # TODO: real length (motor leads, as short as possible)
+    ignore_in_bom: true
+    notes: "VTOL motor 4 (rear right) phase leads"
+
+  # ---- ESC input capacitors: direct capacitor legs soldered to the ESC pads ----------------
+  # These are not real cables: the capacitor's own legs go straight onto the exposed copper of the
+  # ESC capacitor pads, so nothing goes in the BOM. Colors only tell the legs apart (red = positive,
+  # the longer leg; black = negative, the grey stripe side). Keep the legs as short as possible and
+  # fold them close to the body (APD).
+  # TODO: real leg length (a few mm).
+  W_ACT_32:
+    wirecount: 2
+    colors: [RD, BK]
+    length: 0
+    ignore_in_bom: true
+    notes: "Direct capacitor legs soldered: VTOL motor 1 (front right) ESC, capacitor 1 of 2"
+  W_ACT_33:
+    wirecount: 2
+    colors: [RD, BK]
+    length: 0
+    ignore_in_bom: true
+    notes: "Direct capacitor legs soldered: VTOL motor 1 (front right) ESC, capacitor 2 of 2"
+  W_ACT_38:
+    wirecount: 2
+    colors: [RD, BK]
+    length: 0
+    ignore_in_bom: true
+    notes: "Direct capacitor legs soldered: VTOL motor 4 (rear right) ESC, capacitor 1 of 2"
+  W_ACT_39:
+    wirecount: 2
+    colors: [RD, BK]
+    length: 0
+    ignore_in_bom: true
+    notes: "Direct capacitor legs soldered: VTOL motor 4 (rear right) ESC, capacitor 2 of 2"
+
+connections:
+
+  # XT90 male at the wing split -> ESC input, VTOL motors 1 and 4 (right wing).
+  # Motor numbers follow the ArduPilot QuadPlane Quad X default: 1 front right (CCW), 2 rear left (CCW),
+  # 3 front left (CW), 4 rear right (CW); left wing = motors 3 and 2, right wing = motors 1 and 4.
+  # TODO: check the spin direction on the real build (swap two phase wires to reverse a motor).
+  - - XT90_VTOL1_M: [POS, NEG]
+    - W_ACT_01: [1, 2]
+    - ESC_VTOL1_IN: [IN_POS, IN_NEG]
+  - - XT90_VTOL4_M: [POS, NEG]
+    - W_ACT_04: [1, 2]
+    - ESC_VTOL4_IN: [IN_POS, IN_NEG]
+
+  # ESC motor phase pads -> motor, VTOL motors 1 and 4.
+  - - ESC_VTOL1_PH: [PH_A, PH_B, PH_C]
+    - W_ACT_05: [1, 2, 3]
+    - MOT_VTOL1: [PH_A, PH_B, PH_C]
+  - - ESC_VTOL4_PH: [PH_A, PH_B, PH_C]
+    - W_ACT_08: [1, 2, 3]
+    - MOT_VTOL4: [PH_A, PH_B, PH_C]
+
+  # ==== ESC input capacitors (2 per ESC, from the ESC box) ==================================
+  # Both capacitors of an ESC sit on the same pad pair (in parallel). The capacitor legs are
+  # soldered directly to the ESC pads, see the W_ACT_32 to W_ACT_39 comment.
+  - - CAP_VTOL1_A: [CAP_POS, CAP_NEG]
+    - W_ACT_32: [1, 2]
+    - ESC_VTOL1_CAP: [CAP_POS, CAP_NEG]
+  - - CAP_VTOL1_B: [CAP_POS, CAP_NEG]
+    - W_ACT_33: [1, 2]
+    - ESC_VTOL1_CAP: [CAP_POS, CAP_NEG]
+  - - CAP_VTOL4_A: [CAP_POS, CAP_NEG]
+    - W_ACT_38: [1, 2]
+    - ESC_VTOL4_CAP: [CAP_POS, CAP_NEG]
+  - - CAP_VTOL4_B: [CAP_POS, CAP_NEG]
+    - W_ACT_39: [1, 2]
+    - ESC_VTOL4_CAP: [CAP_POS, CAP_NEG]

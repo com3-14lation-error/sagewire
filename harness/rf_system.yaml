@@ -21,15 +21,32 @@ metadata:
   title: RF system
   description: Mesh Rider Mini UART link from the Cube, power, Ethernet and antenna ports
 
+# Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM).
+additional_bom_items:
+
+  # The radio itself. Doodle Labs Mesh Rider Mini, model RM-1400-42M3 (455 MHz and 2.2 to 2.5 GHz
+  # bands, per Doodle's product index). Its ports are the RF_P2, RF_P3, RF_P4 and RF_ANT0/1
+  # connectors below.
+  # TODO: confirm with Doodle that RM-1400-42M3 is not a legacy part for new designs (their library
+  # page for this model carries update notes); get the datasheet revision.
+  - description: Radio, Mesh Rider Mini
+    qty: 1
+    designators: AIR
+    manufacturer: Doodle Labs
+    mpn: RM-1400-42M3
+
 connectors:
 
   # Cube Orange+ telemetry port, 6-pin: 1 VCC 5 V, 2 TX (out), 3 RX (in), 4 CTS, 5 RTS, 6 GND, all
   # signals 3.3 V (same pin order as the GPS2 port in flight_control_system.yaml, standard Cube
   # pinout). Only TX, RX and GND are used; the 5 V pin stays empty (the radio has its own supply)
   # and the radio has no flow-control pins, so CTS and RTS stay empty too.
-  # TODO: plug series (the Cube end is a JST GH).
+  # Plug: JST GH 6-pin housing (GHR-06V-S), the same family as the Cube port.
   FC_TELEM1:
-    type: 6-pin TELEM plug   # TODO: series
+    type: JST GH 6-pin plug housing
+    subtype: female
+    manufacturer: JST
+    mpn: GHR-06V-S
     notes: "Cube Orange+ TELEM1 port (UART). Cube TX (pin 2) goes to the radio UART_RX, Cube RX (pin 3) to the radio UART_TX. 3.3 V logic."
     pinlabels: [VCC, TX, RX, CTS, RTS, GND]
     hide_disconnected_pins: true
@@ -64,7 +81,7 @@ connectors:
 
   # 5 V KDE UBECUVC high-current (HP) output leads: yellow (+), black (-), 16 AWG, about 210 mm,
   # pre-tinned ends. Rated 10 A continuous through the leads. The radio is the only load on them
-  # (1.6 A peak); the wing LEDs are on the servo ports (the two wing actuator files). The three radio
+  # (1.6 A peak); the wing LEDs are on the servo ports (the two wing fuselage-side files). The three radio
   # wires per polarity are soldered or spliced onto the single UBEC lead.
   # TODO: splice method (solder and heat-shrink, or a small terminal block).
   RF_UBEC_HP:
@@ -111,6 +128,7 @@ connectors:
     notes: "Jetson board second Ethernet port. Direct link to the Mesh Rider radio. Pins 4, 5, 7, 8 not used (radio port is 100 Base-T)."
     pinlabels: [TX+, TX-, RX+, NC, NC, RX-, NC, NC]
     hide_disconnected_pins: true
+    ignore_in_bom: true   # port on the Jetson board, not bought
 
   # Antenna ports, MMCX female on the radio (Molex 73414-0100), so the antenna cable has an MMCX
   # male plug here. 2x2 MIMO, so both ports are expected to be used. Not wired for now.
@@ -130,14 +148,14 @@ connectors:
 
 cables:
 
-  # Cube TELEM -> radio port 3. 3.3 V UART, so any thin wire does. 28 AWG sits inside the GH
-  # contact range (26 to 30 AWG). Colors: yellow = Cube TX to radio RX, green = Cube RX from
+  # Cube TELEM -> radio port 3. 3.3 V UART, so gauge does not matter electrically. 26 AWG is the
+  # heaviest wire the GH contact takes (26 to 30 AWG) and matches the other cables. Colors: yellow = Cube TX to radio RX, green = Cube RX from
   # radio TX, black = ground.
   # TODO: shielded or twisted pair if the run turns out long or noisy (the radio is a 2.4 GHz
   # transmitter), and the real baud rate on the Cube side.
   W_RF_01:
     wirecount: 3
-    gauge: 28 AWG
+    gauge: 26 AWG
     colors: [YE, GN, BK]
     length: 0   # TODO: real length after layout analysis
     notes: "Cube TELEM1 to radio UART"

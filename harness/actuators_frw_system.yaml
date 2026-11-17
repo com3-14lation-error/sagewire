@@ -2,9 +2,12 @@
 # Scope: the forward-thrust ESC (APD 120F3, same as the VTOL ESCs) and motor (Vector Technics VT4130
 # 300KV, 18 inch propeller): signal from Cube AUX OUT 5, input capacitors and motor phase leads. The
 # ESC battery input is wired to the PDB in power_system.yaml (ESC_FWD_IN). There is no wing split.
-# The wing actuators were split out of this file: the left wing (VTOL motors 3 and 2, servos, LEDs)
-# is in actuators_left_wing_system.yaml and the right wing (VTOL motors 1 and 4, servos, LEDs) in
-# actuators_right_wing_system.yaml. Cable IDs (W_ACT_nn) are unchanged.
+# The wing actuators were split out of this file, three files per wing: the left wing (VTOL motors 3
+# and 2, servos, LEDs) is in actuators_left_motors_system.yaml (power chain, ESCs, motors),
+# actuators_left_wing_system.yaml (wing side of the DB-25, servos, LEDs, ESC signal pads) and
+# actuators_left_fuselage_system.yaml (fuselage side of the DB-25, UBEC ports, Cube AUX and MAIN, CAN
+# splitter ports); the right wing (VTOL motors 1 and 4) has the same three files with right in the
+# name. Cable IDs (W_ACT_nn) are unchanged.
 #
 # Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
 # Gauges and colors are recommendations, see the comment above each cable.
@@ -13,15 +16,51 @@ metadata:
   title: Actuators system, forward thrust
   description: Forward-thrust ESC and motor, Cube AUX 5 signal
 
+# Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM).
+additional_bom_items:
+
+  # Forward-thrust ESC: APD 120F3[X]v2, P/N 100785. From the APD specification table: 12S maximum
+  # (5S minimum), 50 V maximum, 120 A continuous (60 s), 200 A burst (5 s), bidirectional DShot YES
+  # (DShot 150, 300 or 600 auto-detected), PWM 50 to 499 Hz, 59 x 29 x 14 mm, 20 g, DC input leads at
+  # most 120 mm, firmware and configuration over UART or pass-through. The maximum power ratings
+  # need 33 m/s of airflow; the temperature limiter starts at 115 C (50 % current).
+  # TODO: the 12S pack is 50.4 V at full charge (4.2 V per cell) and the ESC maximum is 50 V, so
+  # there is no margin. Check with APD, or limit the charge voltage.
+  - description: ESC, 120F3[X]v2
+    qty: 1
+    designators: ESC_FWD
+    manufacturer: APD
+    mpn: "100785"
+
+  # Forward-thrust motor: Vector Technics VT4130 FW, for now.
+  # TODO: provisional. Confirm the motor model (KV, 18 inch propeller, lead length and gauge) and the
+  # Vector Technics part number before ordering.
+  - description: Motor, VT4130 FW (forward thrust)
+    qty: 1
+    designators: MOT_FWD
+    manufacturer: Vector Technics
+
+  # Decoupling capacitor from the ESC box: 330 uF 50 V electrolytic, not attached (APD table says
+  # "1 X 330uF 50V"). Supplied with the ESC.
+  # TODO: the APD table says one capacitor per ESC but this harness models two (CAP_FWD_A and
+  # CAP_FWD_B, and two per VTOL ESC in the wing motors files). Check the box and fix the count (here and in
+  # the wing motors files). The 50 V rating is the same as the ESC maximum (see the 50.4 V note above).
+  - description: Capacitor, electrolytic 330 uF 50 V (supplied with the ESC)
+    qty: 2
+    designators: [CAP_FWD_A, CAP_FWD_B]
+
 connectors:
 
   # --- Forward-thrust ESC (APD 120F3, same as the VTOL ESCs) ---------------------------
   # Battery input pads are in power_system.yaml (ESC_FWD_IN). Same pad layout as the VTOL ESCs (see
-  # the wing files). All connections are solder pads, so there is nothing to buy on the ESC side.
+  # the wing motors files). All connections are solder pads, so there is nothing to buy on the ESC side.
   # Capacitors: APD says that if the ESC is more than 12 cm from the power source an additional
-  # capacitor is needed on top of the included ones; the value and voltage of the included ones are
-  # not in the APD docs (TODO: read the markings, then decide the extra capacitors).
-  # Signal pads (top to bottom: T, S, -). T = telemetry out, S = signal in (PWM), - = signal ground.
+  # capacitor is needed on top of the included ones. The included one is 330 uF 50 V (APD
+  # specification table, see additional_bom_items above).
+  # TODO: decide the extra capacitors for the battery lead length.
+  # Signal pads (top to bottom: T, S, -). T = telemetry out (serial), S = signal in (DShot), - = signal
+  # ground. Bidirectional DShot is used, so the T pad stays unwired: eRPM and the telemetry data come
+  # back on S.
   ESC_FWD_SIG:
     type: Solder pads
     notes: "Forward ESC signal pads: T telemetry out, S signal in, GND signal ground"
@@ -57,13 +96,13 @@ connectors:
     ignore_in_bom: true
 
   CAP_FWD_A:
-    type: Electrolytic capacitor (spec not known)
+    type: Electrolytic capacitor 330 uF 50 V
     notes: "Forward ESC input capacitor 1 of 2, from the ESC box"
     pinlabels: [CAP_POS, CAP_NEG]
     ignore_in_bom: true
 
   CAP_FWD_B:
-    type: Electrolytic capacitor (spec not known)
+    type: Electrolytic capacitor 330 uF 50 V
     notes: "Forward ESC input capacitor 2 of 2, from the ESC box"
     pinlabels: [CAP_POS, CAP_NEG]
     ignore_in_bom: true
@@ -77,11 +116,17 @@ connectors:
   # forward-thrust motor on AUX 5.
   # One 3-pin housing per port, only signal and ground wired. The middle (power) slot stays EMPTY: the
   # ESCs have no BEC output and the Cube servo rail must not be fed from here.
-  # TODO: DuPont housing part number and crimp contacts; orient each plug so signal is on the
-  # signal row (bottom row in the Cube pin picture). The ESC telemetry (T) wire is not wired at either
-  # end, so the ESC telemetry path (a serial port on the Cube) is still open.
+  # Plug housing: Molex KK 254 3-pin (DuPont). TODO: orient each plug so signal is on the
+  # signal row (bottom row in the Cube pin picture).
+  # ESC telemetry: Bidirectional DShot will be used. The single signal wire carries the throttle
+  # command to the ESC and reports back the eRPM and the telemetry data on the same wire, so the ESC
+  # T wire is not wired and no extra serial port on the Cube is needed. Bidirectional DShot needs
+  # DShot-capable timers (AUX OUT on the FMU) and an ESC firmware that supports it.
+  # Confirmed by the APD 120F3[X]v2 specification table: bidirectional DShot YES, DShot frequency
+  # auto-detected (150, 300 or 600 kbit/s), PWM 50 to 499 Hz.
   FC_AUX5:
-    type: DuPont 3-pin female housing (2.54 mm)   # TODO: part number
+    type: Molex KK 254 3-pin housing (DuPont)
+    manufacturer: Molex
     subtype: female
     notes: "Cube Orange+ AUX OUT 5: forward-thrust motor ESC signal. Signal and ground only, power slot empty."
     pinlabels: [S, V_POS, GND]
@@ -102,14 +147,15 @@ cables:
 
   # Cube AUX OUT -> ESC signal and signal ground, one cable per motor: two wires, signal white and
   # ground black, twisted together all the way (APD: twist the signal with its ground). Four go to
-  # the fuselage DB-25 and continue through the wing cable (AUX 1 to 4, in the wing files); the
+  # the fuselage DB-25 and continue through the wing cable (AUX 1 to 4, in the wing fuselage files); the
   # fifth, here, goes straight to the forward ESC. 26 AWG matches the wing side and fits DuPont
   # contacts (typically 22 to 28 AWG).
   # This run is short (inside the fuselage), so DShot margin is less of a worry than for the wing
   # runs; the protocol is still a decision for later (DShot150 or DShot300, or fall back to PWM or
   # Oneshot if the signal is not clean).
-  # TODO: real lengths after layout; check the protocols the APD 120F3 accepts and the maximum
-  # cable length; shielding if noisy.
+  # The APD 120F3 accepts DShot 150, 300 and 600 (auto-detected) and PWM 50 to 499 Hz.
+  # TODO: real lengths after layout; the maximum cable length for the DShot rate chosen;
+  # shielding if noisy.
   W_ACT_56:
     wirecount: 2
     gauge: 26 AWG
@@ -144,7 +190,7 @@ connections:
     - MOT_FWD: [PH_A, PH_B, PH_C]
 
   # Forward-thrust motor: Cube AUX 5 straight to the forward ESC signal pads (no wing split). The
-  # telemetry pad (T) is not wired.
+  # telemetry pad (T) is not wired: bidirectional DShot reports eRPM and telemetry on the signal wire.
   -
     - FC_AUX5: [S, GND]
     - W_ACT_56: [1, 2]

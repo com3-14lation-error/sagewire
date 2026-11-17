@@ -2,7 +2,7 @@
 # Scope so far: PDB -> Cube Orange+ power link, and two DroneCAN links:
 # Cube CAN1 -> Sierra PrecisionPoint-Pro GPS (CAN1.1), with the airspeed sensor daisy-chained
 # behind it (GPS CAN1.2 -> airspeed sensor), and Cube CAN2 -> port 1 of the passive CAN splitter
-# (the servo branches, ports 2 to 5, are in actuators_left_wing_system.yaml and actuators_right_wing_system.yaml).
+# (the servo branches, ports 2 to 5, are in actuators_left_fuselage_system.yaml and actuators_right_fuselage_system.yaml).
 # The LightWare GRF-500 LiDAR is wired to the Cube GPS2 port (UART8, SERIAL4 in ArduPilot).
 # ServoBoard and the other signals come later.
 #
@@ -11,6 +11,55 @@
 metadata:
   title: Flight control system
   description: Flight controller power link, DroneCAN links (GPS and daisy-chained airspeed sensor on CAN1, CAN splitter port 1 on CAN2) and LiDAR on GPS2
+
+# Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM).
+# Designators use the tags of docs/component_list.md.
+additional_bom_items:
+
+  # The power distribution board (axldrone PDB 400A) is a BOM line in power_system.yaml; only its
+  # 6-pin output plug (PDB_FC_PWR) is here.
+
+  # Flight controller: CubePilot Cube Orange+ Standard Set with the ADS-B carrier board. The ports in
+  # the connectors below follow the standard Cube pinout.
+  # TODO: check the CAN1/CAN2, GPS2, TELEM1/2 and POWER1 headers against the ADS-B carrier board (not
+  # the standard carrier), what else the set contains (it differs by seller: power brick, cables, SD
+  # card), and the ADS-B antenna (not in the harness or the BOM yet).
+  - description: Flight controller, Cube Orange+ Standard Set with ADS-B carrier board
+    qty: 1
+    designators: FCT
+    manufacturer: CubePilot
+    mpn: HX4-06222
+
+  # GNSS: Sierra PrecisionPoint-Pro (DroneCAN, CAN1.1 and CAN1.2 ports).
+  # TODO: Sierra part number and company name as printed on the product. docs/component_list.md says
+  # "Sierra Precision Pro X2": confirm that this is one module (the harness has one).
+  - description: GNSS receiver, PrecisionPoint-Pro (DroneCAN)
+    qty: 1
+    designators: GPS
+    manufacturer: Sierra
+
+  # Airspeed sensor: Sierra TrueSpeed V2, daisy-chained behind the GPS on CAN1.
+  - description: Airspeed sensor, TrueSpeed V2 (DroneCAN)
+    qty: 1
+    designators: SPD
+    manufacturer: Sierra
+    mpn: SA-TSPD 0019
+
+  # Laser rangefinder: LightWare GRF-500, on the Cube GPS2 port through the LightWare Pixhawk adapter
+  # (LRF_COMM, in the connector list).
+  - description: Laser rangefinder, GRF-500
+    qty: 1
+    designators: LDR
+    manufacturer: LightWare
+    mpn: GRF-500
+
+  # CAN splitter: SwiftWing DroneCAN 6-port passive splitter, JST-GH 4-pin. One splitter for the whole
+  # aircraft: port 1 is here (CAN_SPL_P1), ports 2 to 5 are in the two wing fuselage-side files, port 6 is
+  # spare. TODO: part number (the Zbotic listing gives none) and confirm the ports are SM04B-GHS-TB.
+  - description: CAN splitter, 6-port passive, DroneCAN
+    qty: 1
+    designators: CAN_SPL
+    manufacturer: SwiftWing
 
 connectors:
 
@@ -31,6 +80,8 @@ connectors:
   # Harness-side plug for the Cube Orange+ POWER1 port.
   FC_POWER1:
     type: Molex CLIK-Mate 2.00 mm 6-pin housing
+    manufacturer: Molex
+    mpn: 502439-0600
     notes: "Cube Orange+ POWER1. CURRENT and VOLTAGE are analog, 3.3 V max."
     pinlabels: [VCC, VCC, CURRENT, VOLTAGE, GND, GND]
 
@@ -51,7 +102,7 @@ connectors:
   # termination. Cube end: each Cube CAN port is terminated with 120 ohm (docs/CAN Termination for
   # Servos.md); confirm by measuring CAN_H to CAN_L with nothing plugged in and power off.
   FC_CAN1:
-    type: JST GH 4-pin
+    type: JST GH 4-pin plug housing
     subtype: female
     manufacturer: JST
     mpn: GHR-04V-S   # TODO: confirm series on the carrier
@@ -59,10 +110,10 @@ connectors:
     pinlabels: [VCC, CAN_H, CAN_L, GND]
 
   # Cube Orange+ CAN2: passive CAN splitter port 1, which feeds the four servos (ports 2 to 5 are in
-  # the two wing actuator files). Only CAN_H, CAN_L and GND are wired; the 5 V pin stays empty, because
+  # the two wing fuselage-side files). Only CAN_H, CAN_L and GND are wired; the 5 V pin stays empty, because
   # the splitter bus 5 V pin is not used by the servo branches.
   FC_CAN2:
-    type: JST GH 4-pin
+    type: JST GH 4-pin plug housing
     subtype: female
     manufacturer: JST
     mpn: GHR-04V-S   # TODO: confirm series on the carrier
@@ -71,12 +122,12 @@ connectors:
     hide_disconnected_pins: true
 
   # CAN splitter port 1 (SwiftWing 6-port passive splitter, JST-GH 4-pin ports, all ports bussed).
-  # The other ports are in the two wing actuator files (CAN_SPL_P2 to P5). The splitter has no
+  # The other ports are in the two wing fuselage-side files (CAN_SPL_P2 to P5). The splitter has no
   # termination and no isolation. Same pin order on every port: 1 +5 V, 2 CAN_H, 3 CAN_L, 4 GND.
   # TODO: GH housing part number and contact type (GHR-04V-S with SSHL-002T-P0.2 for 26 AWG), and
   # confirm that the splitter ports are SM04B-GHS-TB headers.
   CAN_SPL_P1:
-    type: JST GH 4-pin
+    type: JST GH 4-pin plug housing
     subtype: female
     manufacturer: JST
     mpn: GHR-04V-S
@@ -90,14 +141,20 @@ connectors:
   # TODO: confirm in the Sierra manual that CAN1.1 and CAN1.2 are bussed inside the module (CAN
   # lines and 5 V), and that 5 V 250 mA is the module's own draw (the sensor adds about 50 mA).
   GPS_CAN1_1:
-    type: 4-pin CAN plug   # TODO: series
+    type: JST GH 4-pin plug housing
+    subtype: female
+    manufacturer: JST
+    mpn: GHR-04V-S
     notes: "Sierra PrecisionPoint-Pro CAN1.1 (from the Cube). Max 5 V 250 mA for the module. Not the end node: termination off (CAN_TERM=0, the Sierra default)."
     pinlabels: [VCC, CAN_H, CAN_L, GND]
 
   # Sierra PrecisionPoint-Pro CAN1.2: the daisy chain output towards the airspeed sensor. Pin order
   # assumed the same as CAN1.1 (Pixhawk standard).
   GPS_CAN1_2:
-    type: 4-pin CAN plug   # TODO: series
+    type: JST GH 4-pin plug housing
+    subtype: female
+    manufacturer: JST
+    mpn: GHR-04V-S
     notes: "Sierra PrecisionPoint-Pro CAN1.2 (to the airspeed sensor). Pin order assumed same as CAN1.1."
     pinlabels: [VCC, CAN_H, CAN_L, GND]
 
@@ -107,21 +164,28 @@ connectors:
   # TODO: decide (enable the sensor termination if it has one, or a 120 ohm resistor across CAN_H
   # and CAN_L at this end, or none), since it is the far end of the bus.
   ARSP_CAN:
-    type: 4-pin CAN plug   # TODO: series
+    type: JST GH 4-pin plug housing
+    subtype: female
+    manufacturer: JST
+    mpn: GHR-04V-S
     notes: "Sierra TrueSpeed V2 CAN port, about 50 mA nominal. Pin order assumed Pixhawk standard. Far end of the CAN1 bus: termination off by default, decision open."
     pinlabels: [VCC, CAN_H, CAN_L, GND]
 
   # ---- LightWare GRF-500 LiDAR -> Cube GPS2 (UART, 3.3 V logic) ------------------------------
-  # GRF-500 serial/I2C port: JST SUR 8-pin, mating housing 08SUR-32S (product guide, section 7.2).
-  # Pin 1 TXD (sensor transmit), 2 RXD (sensor receive), 3 GPIO (alarm output, unused),
-  # 4 not used, 5 Disable (leave floating to operate), 6 VIN 4.5-5.5 V (120 mA typical,
+  # GRF-500 serial/I2C port: JST SUR 8-pin (mating housing 08SUR-32S, an IDC part for 32 AWG wire,
+  # product guide section 7.2), so it is not wired by hand. The LightWare Pixhawk adapter
+  # ACC_PX_08SUR-32S is used instead: it plugs into the sensor and is the harness side connector.
+  # Sensor pin order: 1 TXD (sensor transmit), 2 RXD (sensor receive), 3 GPIO (alarm output,
+  # unused), 4 not used, 5 Disable (leave floating to operate), 6 VIN 4.5-5.5 V (120 mA typical,
   # 250 mA surge at start-up), 7 GND, 8 GND. Pin labels repeat (GND), so pins are used by number.
+  # TODO: the pin labels below are the sensor port order. Check the connector on the adapter's
+  # Pixhawk side and its pin order, then update the labels (and whether W_FC_04 is still needed or
+  # the adapter plugs straight into the Cube GPS2 port).
   LRF_COMM:
-    type: JST SUR 8-pin plug housing
-    subtype: female
-    manufacturer: JST
-    mpn: 08SUR-32S
-    notes: "LightWare GRF-500 serial port. Pin 1 is the sensor TXD, so it goes to the Cube RX. Pin 5 (Disable) stays floating. TODO: crimp contact part number and wire range for the SUR series."
+    type: LightWare Pixhawk adapter for GRF series
+    manufacturer: LightWare
+    mpn: ACC_PX_08SUR-32S
+    notes: "LightWare GRF-500 serial port, through the LightWare Pixhawk adapter. Pin 1 is the sensor TXD, so it goes to the Cube RX. Pin 5 (Disable) stays floating. Pin order to be checked against the adapter."
     pinlabels: [TXD, RXD, GPIO, NC, DISABLE, VIN, GND, GND]
     hide_disconnected_pins: true
 
@@ -129,7 +193,10 @@ connectors:
   # 6 GND. UART signals are 3.3 V, which matches the GRF-500 (3.3 V TTL, 5 V tolerant).
   # SCL/SDA are not used (the GRF-500 is on UART here), so pins 4 and 5 stay empty.
   FC_GPS2:
-    type: 6-pin GPS2 plug   # TODO: series
+    type: JST GH 6-pin plug housing
+    subtype: female
+    manufacturer: JST
+    mpn: GHR-06V-S
     notes: "Cube Orange+ GPS2 (UART8). Cube TX (pin 2) goes to the sensor RXD, Cube RX (pin 3) to the sensor TXD."
     pinlabels: [VCC, TX, RX, SCL, SDA, GND]
     hide_disconnected_pins: true
@@ -174,18 +241,20 @@ cables:
 
   # Cube GPS2 -> GRF-500. 4 wires: 5 V, sensor TXD to Cube RX, Cube TX to sensor RXD, GND.
   # Only GND pin 7 is used (pin 8 is also GND on the sensor). Load is 120 mA typical, 250 mA at
-  # start-up: on 30 AWG that is about 0.17 V per metre of cable (supply plus return), against
-  # a 4.5 V minimum at the sensor, so keep the run short or use a heavier wire.
-  # TODO: SUR contact wire range is not confirmed (GH takes 26-30 AWG), so check 30 AWG fits both.
+  # start-up: on 26 AWG that is about 0.07 V per metre of cable (supply plus return), against
+  # a 4.5 V minimum at the sensor (30 AWG would be 0.17 V per metre). 26 AWG is the heaviest wire
+  # the GH contact takes and matches the other flight control cables.
+  # TODO: the sensor end is the LightWare adapter, not a SUR housing on this wire (see LRF_COMM), so
+  # recheck the gauge and the connection once the adapter's connector is known.
   W_FC_04:
     wirecount: 4
-    gauge: 30 AWG
+    gauge: 26 AWG
     colors: [RD, YE, GN, BK]
     length: 0   # TODO: real length after layout analysis
     notes: "Cube GPS2 to GRF-500 (serial). Wires: 1 5 V, 2 sensor TXD to Cube RX, 3 Cube TX to sensor RXD, 4 GND."
 
   # Cube CAN2 -> CAN splitter port 1: CAN_H, CAN_L and GND (no 5 V). Keep CAN_H and CAN_L twisted.
-  # The splitter servo branches are far over the 0.3 m stub rule (see the two wing actuator files).
+  # The splitter servo branches are far over the 0.3 m stub rule (see the two wing fuselage-side files).
   W_FC_05:
     wirecount: 3
     gauge: 26 AWG
