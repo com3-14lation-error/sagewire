@@ -3,9 +3,11 @@
 
     python scripts/publish_pages.py [BUILD_FOLDER] [--push] [--dry-run]
 
-Run `python scripts/render.py` first (clear build/ beforehand for a clean set). The branch holds
-one commit per publication, each a snapshot of: every `*.html` in the build folder, an
-`index.html` that lists them by file name, and a `.nojekyll`. The first commit has no parent;
+Run `python scripts/render.py`, then `python scripts/make_bom.py` and
+`.venv/Scripts/python scripts/make_wire_list.py` first (clear build/ beforehand for a clean set).
+The branch holds one commit per publication, each a snapshot of: every harness `*.html` in the
+build folder, the reports (`bom.html`, `bom.csv`, `wire_list.html`), an `index.html` that lists
+the reports first and then the harness pages by file name, and a `.nojekyll`. The first commit has no parent;
 later ones sit on top of the previous tip, so the push is always a fast-forward and nothing is
 ever force-pushed. Nothing is pushed unless `--push` is given; GitHub Pages itself is switched
 on by hand (Settings, Pages, branch, root).
@@ -32,6 +34,13 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 INDEX = "index.html"
+# Reports written by make_bom.py and make_wire_list.py: (file, title shown on the index page).
+REPORTS = (
+    ("bom.html", "Bill of materials (all harnesses)"),
+    ("wire_list.html", "Wire list"),
+    ("bom.csv", "Bill of materials as CSV"),
+)
+REPORT_NAMES = tuple(n for n, _ in REPORTS)
 EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.IGNORECASE)  # http:, data:, mailto:, //host
 
 
@@ -82,7 +91,8 @@ def collect(build: Path, harness: Path) -> list[str]:
     """The page names to publish: every *.html in the build folder, checked against the harnesses."""
     if not build.is_dir():
         raise PublishError(f"{build} not found: run `python scripts/render.py`")
-    pages = sorted(p.name for p in build.glob("*.html") if p.name != INDEX)
+    pages = sorted(p.name for p in build.glob("*.html")
+                   if p.name != INDEX and p.name not in REPORT_NAMES)
     wanted = {f"{y.stem}.html" for y in harness.glob("*.yaml")}
     missing = sorted(wanted - set(pages))
     extra = sorted(set(pages) - wanted)
@@ -93,16 +103,27 @@ def collect(build: Path, harness: Path) -> list[str]:
         raise PublishError("build/ does not match harness/:\n  " + "\n  ".join(problems))
     if not pages:
         raise PublishError(f"no harness pages in {build}")
+    missing_reports = [n for n in REPORT_NAMES if not (build / n).is_file()]
+    if missing_reports:
+        raise PublishError(
+            "reports missing from build/: " + ", ".join(missing_reports)
+            + " (run `python scripts/make_bom.py` and "
+            "`.venv/Scripts/python scripts/make_wire_list.py`)")
     return pages
 
 
 def stale(build: Path, harness: Path, pages: Sequence[str]) -> list[str]:
-    """Pages older than their harness file (the YAML was edited after the render)."""
-    return [n for n in pages
-            if (build / n).stat().st_mtime < (harness / f"{n[:-5]}.yaml").stat().st_mtime]
+    """Pages older than their harness file, reports older than the newest harness file."""
+    out = [n for n in pages
+           if (build / n).stat().st_mtime < (harness / f"{n[:-5]}.yaml").stat().st_mtime]
+    newest = max((y.stat().st_mtime for y in harness.glob("*.yaml")), default=0)
+    out += [n for n in REPORT_NAMES if (build / n).stat().st_mtime < newest]
+    return out
 
 
 def index_page(pages: Sequence[str], commit: str, date: str) -> str:
+    reports = "\n".join(f'    <li><a href="{html.escape(n)}">{html.escape(t)}</a></li>'
+                        for n, t in REPORTS)
     items = "\n".join(f'    <li><a href="{html.escape(n)}">{html.escape(n)}</a></li>'
                       for n in pages)
     return (
@@ -112,9 +133,12 @@ def index_page(pages: Sequence[str], commit: str, date: str) -> str:
         '<meta name="color-scheme" content="light dark">\n'
         "<title>Sage wiring</title>\n"
         "<style>body{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:2rem auto;"
-        "padding:0 1rem}li{margin:.25rem 0}small{opacity:.7}</style>\n"
+        "padding:0 1rem}h2{font-size:1.1rem;margin:1.5rem 0 .5rem}li{margin:.25rem 0}"
+        "small{opacity:.7}</style>\n"
         "</head>\n<body>\n"
         "<h1>Sage wiring</h1>\n"
+        f"<ul>\n{reports}\n</ul>\n"
+        "<h2>Harnesses</h2>\n"
         f"<ul>\n{items}\n</ul>\n"
         f"<p><small>Built from commit {html.escape(commit)}, {html.escape(date)}.</small></p>\n"
         "</body>\n</html>\n")
@@ -123,11 +147,11 @@ def index_page(pages: Sequence[str], commit: str, date: str) -> str:
 # -------------------------------------------------------------------------------------- the branch
 def stage(build: Path, pages: Sequence[str], commit: str, date: str, dest: Path) -> list[str]:
     """Copy the pages into `dest` byte for byte, add index.html and .nojekyll; return all names."""
-    for name in pages:
+    for name in (*pages, *REPORT_NAMES):
         (dest / name).write_bytes((build / name).read_bytes())
     (dest / INDEX).write_text(index_page(pages, commit, date), encoding="utf-8", newline="\n")
     (dest / ".nojekyll").write_text("", encoding="utf-8")
-    return sorted({*pages, INDEX, ".nojekyll"})
+    return sorted({*pages, *REPORT_NAMES, INDEX, ".nojekyll"})
 
 
 def missing_links(staging: Path, files: Sequence[str]) -> list[str]:
@@ -195,7 +219,7 @@ def publish(
         if dry_run:
             info["parent"] = parent
             return info
-        new, _ = commit_snapshot(repo, staging, parent, f"pages: harness renders of {commit}")
+        new, _ = commit_snapshot(repo, staging, parent, f"pages: harness renders and reports of {commit}")
     if not new:
         info["unchanged"] = "yes"
         return info

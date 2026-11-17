@@ -30,7 +30,6 @@ Open design items. The detail for each one is in the `TODO:` comments of the har
 16. Assumed connector details to check on the real parts: Cube Orange+ ADS-B carrier ports, LightWare Pixhawk adapter pin order (and whether W_FC_04 is still needed), Sierra GPS and airspeed pin order, Jetson board power pads (polarity and size, gauge of W_CEL_08).
 17. Forward motor (VT4130 FW) is provisional.
 18. All cable lengths are placeholders (0) until the layout analysis. DShot rate and the maximum cable length on the long wing runs follow from it.
-19. Add the BOM and the wire list to the GitHub Pages site.
 
 ## Detailed wiring (WireViz)
 
@@ -48,5 +47,16 @@ python scripts/render.py power rf --open
 ```
 
 The actuators are split into seven files: for each wing a motors file (`actuators_left_motors_system.yaml`, `actuators_right_motors_system.yaml`: power chain, ESCs, motors, capacitors), a wing-side file (`actuators_left_wing_system.yaml`, `actuators_right_wing_system.yaml`: DB-25 plug, servos, LEDs, ESC signal pads) and a fuselage-side file (`actuators_left_fuselage_system.yaml`, `actuators_right_fuselage_system.yaml`: DB-25 socket, UBEC ports, Cube AUX and MAIN, CAN splitter ports), plus `actuators_frw_system.yaml` (forward-thrust motor). `python scripts/make_wire_list.py` regenerates `docs/wire_list.md` from all the harnesses.
+
+Reports and the GitHub Pages site (`index.html` lists the BOM and the wire list first, then each harness):
+
+```
+python scripts/render.py                                  # harness pages and per-harness BOMs into build/
+python scripts/make_bom.py                                # consolidated BOM: build/bom.html and build/bom.csv
+.venv/Scripts/python scripts/make_wire_list.py            # wire list: build/wire_list.html (and docs/wire_list.md)
+python scripts/publish_pages.py --push                    # publish build/ to the gh-pages branch
+```
+
+`make_bom.py` merges the BOM of every harness (same description, manufacturer and MPN are added together). `make_wire_list.py` needs PyYAML, so run it with the project venv. The wire comments in the wire list are written in `scripts/make_wire_list.py`, so add a line there for each new cable.
 
 Needs Graphviz on the PATH. In pin lists, quote labels that YAML would read as booleans (`"NO"`, `"ON"`, `"Y"`).
