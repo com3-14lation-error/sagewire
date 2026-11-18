@@ -1,0 +1,206 @@
+# ALTERNATIVE: 5G dongles powered from the 5 V KDE UBEC (work in progress)
+# NOT part of the consolidated BOM or the wire list. Rendered and published as an alternative to
+# ../cellular_dongles_system.yaml (dongles powered from the Jetson USB jacks), which is the main design
+# until this one is chosen. If it is chosen, move this file over cellular_dongles_system.yaml and
+# update the notes that mention the Jetson USB power (README TODO 8, the Jetson load note on JET_PWR
+# in cellular_system.yaml, the radio note on RF_UBEC_HP in rf_system.yaml, the 5 V note on UBEC5_IN in
+# power_system.yaml).
+#
+# What changes against the main file:
+#   - the dongle 5 V (VBUS) and its ground come from the HP output leads of the 5 V KDE UBEC, one
+#     two-wire cable per dongle (W_CEL_09, W_CEL_10), to the VBUS and GND pads of the female USB
+#     breakout board that the dongle plugs into;
+#   - the VBUS pad of the male USB breakout board (Jetson end) is NOT connected, so the Jetson jack
+#     never feeds the dongle and the two 5 V supplies are never tied together;
+#   - the USB cable (W_CEL_02, W_CEL_03, same IDs as in the main file) carries D-, D+ and GND only.
+#     GND is needed on it for the data link and is also the return of the Jetson side.
+# The 5 V UBEC servo ports are all taken by the wing LEDs, so the dongles use the HP output leads, the
+# same leads that feed the radio (rf_system.yaml, RF_UBEC_HP): all three loads are spliced onto them.
+#
+# Load on the 5 V UBEC with this option: radio 1.6 A peak, six wing LEDs 4.8 A peak (0.8 A each, 7.2 A
+# at the 1 A maximum), two dongles about 2 A each (not measured): about 10.4 A peak (about 12 A at the
+# LED maximum) against 10 A continuous and 22 A total limit. The strobes are not on continuously, so
+# the average is far lower. The HP leads alone carry about 5.6 A peak (16 AWG, 10 A rated).
+# The Jetson 12 V load drops by the dongle power (about 20 W, see JET_PWR in cellular_system.yaml).
+#
+# TODO: measure the real dongle draw (idle, active, modem search) and the 5 V UBEC total before
+# choosing this option. If the total is too close to 10 A, use a separate 5 V BEC for the dongles.
+# TODO: splice or terminal block on the UBEC HP leads (three loads on one lead pair), same open point
+# as for the radio.
+# TODO: final output voltage (5 V or 6 V): 6 V is out of spec for the USB dongles as well as for the
+# radio, so the UBEC stays at 5 V, see UBEC5_IN in power_system.yaml.
+#
+# Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
+
+metadata:
+  title: Cellular system, 5G dongles (alternative, powered from the 5 V UBEC)
+  description: ALTERNATIVE, not in the BOM. Two Waveshare 5G dongles on USB 2.0 to the Jetson, powered from the 5 V KDE UBEC HP leads instead of the Jetson USB jacks
+
+# Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM of
+# this page only; the consolidated BOM does not include alternatives).
+additional_bom_items:
+
+  # Same dongles and modems as the main file, see the notes there (modem choice and TODOs).
+  - description: 5G dongle board, USB to M.2 Key B (modem not included)
+    qty: 2
+    designators: [WAV1, WAV2]
+    manufacturer: Waveshare
+    mpn: USB TO M.2 B KEY
+  - description: 5G modem, M.2 Key B (30 x 52 mm)
+    qty: 2
+    designators: [WAV1_MOD, WAV2_MOD]
+    manufacturer: Telit Cinterion
+    mpn: FN990A28-HP
+
+connectors:
+
+  # 5 V KDE UBECUVC HP output leads: yellow (+), black (-), 16 AWG, about 210 mm, pre-tinned. The
+  # same physical leads as RF_UBEC_HP in rf_system.yaml (that file draws the radio branch, this one
+  # the two dongle branches). Rated 10 A continuous through the leads.
+  UBEC5_HP_MDM:
+    type: UBEC high-current output lead ends (pre-tinned)
+    notes: "5 V KDE UBECUVC HP output: yellow (+), black (-). Same leads as the radio (RF_UBEC_HP). 10 A continuous."
+    pinlabels: [HP_POS, HP_NEG]
+    ignore_in_bom: true
+
+  # ---- Waveshare 5G dongles (tag WAV, two of them) -> Jetson, USB 2.0 only -------------------
+  # Same dongle, breakout boards and Jetson jacks as in the main file (see the notes there): wired
+  # USB 2.0 only (D-, D+, GND), 480 Mbit/s. The difference is the power: VBUS and GND of the dongle
+  # come from the 5 V UBEC, not from the Jetson.
+  # USB Type-A pin order: 1 VBUS, 2 D-, 3 D+, 4 GND, 5 SSRX-, 6 SSRX+, 7 GND_DRAIN, 8 SSTX-, 9 SSTX+.
+  # TODO: part numbers for the breakout boards (the VBUS and GND pads must take the 20 AWG power
+  # wire), and whether the cable is shielded.
+  WAV1_USB:
+    type: USB 3.x Type-A plug
+    subtype: male
+    notes: "Plug on Waveshare dongle 1. Pins 1 to 4 are used. VBUS (pin 1) comes from the 5 V UBEC through the female breakout board, about 2 A."
+    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
+    ignore_in_bom: true
+
+  WAV1_EXT_F:
+    type: USB Type-A female breakout board   # TODO: part number
+    subtype: female
+    notes: "Female breakout board, dongle 1 plugs into it. VBUS and GND from the 5 V UBEC (W_CEL_09), D-, D+ and GND to the Jetson end (W_CEL_02)."
+    pinlabels: [VBUS, D-, D+, GND]
+
+  WAV1_EXT_M:
+    type: USB Type-A male breakout board   # TODO: part number
+    subtype: male
+    notes: "Male breakout board, goes into the Jetson USB jack. VBUS pad NOT connected (the dongle is powered from the 5 V UBEC)."
+    pinlabels: [VBUS, D-, D+, GND]
+
+  JET_USB1:
+    type: USB Type-A jack (Jetson base board)
+    subtype: female
+    notes: "Jetson base board USB-A jack for dongle 1. VBUS pin not used. TODO: which jack (3 are USB 3.2, 1 is USB 2.0)."
+    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
+    ignore_in_bom: true
+
+  WAV2_USB:
+    type: USB 3.x Type-A plug
+    subtype: male
+    notes: "Plug on Waveshare dongle 2. Pins 1 to 4 are used. VBUS (pin 1) comes from the 5 V UBEC through the female breakout board, about 2 A."
+    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
+    ignore_in_bom: true
+
+  WAV2_EXT_F:
+    type: USB Type-A female breakout board   # TODO: part number
+    subtype: female
+    notes: "Female breakout board, dongle 2 plugs into it. VBUS and GND from the 5 V UBEC (W_CEL_10), D-, D+ and GND to the Jetson end (W_CEL_03)."
+    pinlabels: [VBUS, D-, D+, GND]
+
+  WAV2_EXT_M:
+    type: USB Type-A male breakout board   # TODO: part number
+    subtype: male
+    notes: "Male breakout board, goes into the Jetson USB jack. VBUS pad NOT connected (the dongle is powered from the 5 V UBEC)."
+    pinlabels: [VBUS, D-, D+, GND]
+
+  JET_USB2:
+    type: USB Type-A jack (Jetson base board)
+    subtype: female
+    notes: "Jetson base board USB-A jack for dongle 2. VBUS pin not used. TODO: which jack (3 are USB 3.2, 1 is USB 2.0)."
+    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
+    ignore_in_bom: true
+
+cables:
+
+  # USB data cable, dongle n to Jetson: D-, D+ and GND only (no VBUS). Colours as for USB 2.0: white =
+  # D-, green = D+, black = GND. Keep D- and D+ twisted together. Thin wire is enough (about 480 Mbit/s
+  # data, no power), 24 AWG is a placeholder.
+  # The GND of this cable and the GND of the power cable (W_CEL_09 or W_CEL_10) meet on the same pin of
+  # the female breakout board, so the dongle return current can take both paths (the 5 V UBEC return
+  # and, through the Jetson, the 12 V UBEC return). Both UBECs share the battery negative at the PDB.
+  # The power cable is the shorter, heavier path, so it takes almost all of it.
+  # TODO: cable type and shield, length after layout.
+  W_CEL_02:
+    wirecount: 3
+    gauge: 24 AWG
+    colors: [WH, GN, BK]
+    length: 0   # TODO: set after layout
+    notes: "USB 2.0 data (D-, D+) and ground for dongle 1 to the Jetson. No VBUS: the dongle is powered from the 5 V UBEC."
+
+  W_CEL_03:
+    wirecount: 3
+    gauge: 24 AWG
+    colors: [WH, GN, BK]
+    length: 0   # TODO: set after layout
+    notes: "USB 2.0 data (D-, D+) and ground for dongle 2 to the Jetson. No VBUS: the dongle is powered from the 5 V UBEC."
+
+  # 5 V UBEC HP leads -> dongle n, VBUS and GND. About 2 A per dongle, so 20 AWG is a placeholder:
+  # 20 AWG is about 33 mOhm per metre per conductor, so about 0.13 V per metre of cable at 2 A (supply
+  # plus return); the USB dongle wants 4.75 to 5.25 V at its plug, so keep the run short. 18 AWG
+  # drops about 0.08 V per metre if the breakout board pads take it.
+  # TODO: gauge once the breakout board pads are chosen, length after layout, splice at the UBEC end.
+  W_CEL_09:
+    wirecount: 2
+    gauge: 20 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: set after layout (keep it short, see the voltage drop above)
+    notes: "5 V UBEC HP leads to the VBUS and GND pads of the dongle 1 breakout board."
+
+  W_CEL_10:
+    wirecount: 2
+    gauge: 20 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: set after layout (keep it short, see the voltage drop above)
+    notes: "5 V UBEC HP leads to the VBUS and GND pads of the dongle 2 breakout board."
+
+connections:
+
+  # Power: the HP lead pair is used once per dongle (spliced joint, same idiom as the radio supply).
+  -
+    - UBEC5_HP_MDM: [HP_POS, HP_NEG]
+    - W_CEL_09: [1, 2]
+    - WAV1_EXT_F: [VBUS, GND]
+  -
+    - UBEC5_HP_MDM: [HP_POS, HP_NEG]
+    - W_CEL_10: [1, 2]
+    - WAV2_EXT_F: [VBUS, GND]
+
+  # Dongle 1: dongle plug mates with our jack, the data cable runs to our plug, which mates with the Jetson jack.
+  -
+    - WAV1_EXT_F: [D-, D+, GND]
+    - W_CEL_02: [1, 2, 3]
+    - WAV1_EXT_M: [D-, D+, GND]
+  -
+    - WAV1_USB: [1, 2, 3, 4]
+    - -->
+    - WAV1_EXT_F: [1, 2, 3, 4]
+  -
+    - WAV1_EXT_M: [2, 3, 4]
+    - -->
+    - JET_USB1: [2, 3, 4]
+
+  # Dongle 2: same.
+  -
+    - WAV2_EXT_F: [D-, D+, GND]
+    - W_CEL_03: [1, 2, 3]
+    - WAV2_EXT_M: [D-, D+, GND]
+  -
+    - WAV2_USB: [1, 2, 3, 4]
+    - -->
+    - WAV2_EXT_F: [1, 2, 3, 4]
+  -
+    - WAV2_EXT_M: [2, 3, 4]
+    - -->
+    - JET_USB2: [2, 3, 4]

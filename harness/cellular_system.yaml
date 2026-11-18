@@ -4,16 +4,45 @@
 # Jetson Ethernet port) and the power port (4 wires -> XT30 male, mated to an XT30 female that is
 # fed from servo port 5 of the same 12 V UBEC).
 # Only the A8-MINI Ethernet and Power ports are used; the Gimbal Control (S.BUS) port is not wired.
-# Also: two Waveshare 5G dongles to the Jetson over USB 2.0 (D+, D-, GND and VBUS, so the Jetson USB
-# ports power them for now; they may move to a BEC in a later draft).
 # Also: the Cube TELEM2 UART link to the Jetson, through a TTL-to-USB converter that plugs into the
 # Jetson USB 2.0 jack.
+# The two Waveshare 5G dongles (USB links to the Jetson) are in cellular_dongles_system.yaml, and
+# the version powered from the 5 V UBEC is in alternatives/cellular_dongles_bec5v_system.yaml.
 #
 # Cable lengths are 0 for now (placeholder). Real lengths come after the layout analysis.
 
 metadata:
   title: Cellular system
-  description: Jetson power input, SIYI camera Ethernet link and two Waveshare 5G dongles on USB 2.0, Cube TELEM2 UART link to the Jetson through a TTL-to-USB converter
+  description: Jetson power input, SIYI camera Ethernet link, Cube TELEM2 UART link to the Jetson through a TTL-to-USB converter
+
+# Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM).
+additional_bom_items:
+
+  # Jetson: Waveshare base board (dual Ethernet version) with an NVIDIA Orin NX module on it.
+  # TODO: Orin NX memory is 16 GB for now, not final (16 GB against 8 GB still to confirm), and the
+  # NVIDIA part number. The module sets the power cap (see the JET_PWR comment).
+  - description: Base board, Jetson Orin Nano/NX, dual Ethernet
+    qty: 1
+    designators: JET_BASE
+    manufacturer: Waveshare
+    mpn: JETSON-ORIN-IO-BASE-B
+  - description: Compute module, Jetson Orin NX 16GB
+    qty: 1
+    designators: JET_MOD
+    manufacturer: NVIDIA
+
+  # Camera: SIYI A8 mini. The cables with the housings (to RJ45 and to XT30U-M) come with it.
+  - description: Gimbal camera, A8 mini
+    qty: 1
+    designators: A8M
+    manufacturer: SIYI
+    mpn: A8 mini
+
+  # Cube TELEM2 to Jetson: USB to TTL converter, model to be chosen. Needs 3.3 V logic.
+  # TODO: exact model (UART connector, USB plug type, logic level).
+  - description: Converter, USB to TTL UART (3.3 V logic)
+    qty: 1
+    designators: U2T
 
 connectors:
 
@@ -23,14 +52,17 @@ connectors:
   # converter, Ethernet, SSD and fan counted at peak; about 6 A with a 40 W module (Orin NX 16GB,
   # MAXN SUPER). Those are caps, not constant draw: the module only reaches its power-mode cap
   # under full load.
-  # TODO: XT30 variant and gender (plug or receptacle) on the Jetson side, and how the XT30 gets to
-  # the board's barrel jack (adapter or pigtail).
-  # TODO: Jetson module (Orin Nano or NX, memory size) and power mode (nvpmodel cap); then measure
-  # the real draw on the bench with both dongles running.
+  # The base board has solder pads for the power input, so the wires from an XT30U-M (cable
+  # W_CEL_08) are soldered straight onto the board. That XT30U-M mates with an XT30U-F on the UBEC
+  # HP leads (JET_XT30_F, female on the BEC side like the camera pair).
+  # TODO: pad labels, polarity and pad size on the board (check before soldering).
+  # TODO: Jetson module is an Orin NX 16GB (memory size not final) and power mode
+  # (nvpmodel cap); then measure the real draw on the bench with both dongles running.
   JET_PWR:
-    type: XT30 connector
-    notes: "Jetson power input (9 to 19 V), from the 12 V UBEC HP leads. About 4.8 A worst case (25 W module)."
+    type: Solder pads
+    notes: "Jetson base board power input pads (9 to 19 V), fed from the 12 V UBEC HP leads through the XT30U pair. About 4.8 A worst case (25 W module)."
     pinlabels: [VIN, GND]
+    ignore_in_bom: true
 
   # 12 V KDE UBECUVC high-current (HP) output leads: yellow (+), black (-), 16 AWG, about 210 mm,
   # pre-tinned ends. Rated 10 A continuous through the leads. The Jetson is the only load on them.
@@ -40,6 +72,26 @@ connectors:
     notes: "12 V KDE UBECUVC HP output: yellow (+), black (-). 10 A continuous."
     pinlabels: [HP_POS, HP_NEG]
     ignore_in_bom: true
+
+  # XT30U pair on the Jetson power path. The female is on the UBEC HP leads (BEC side), the male is
+  # on the pigtail soldered to the Jetson board pads. Pin IDs are synthetic (1 = POS, 2 = NEG); the
+  # housing is keyed, so polarity cannot be reversed. The factory HP leads (16 AWG) go into the
+  # solder cups of the female.
+  JET_XT30_F:
+    type: XT30U female
+    subtype: female
+    manufacturer: Amass
+    mpn: XT30U-F
+    notes: "XT30U female on the 12 V UBEC HP leads (Jetson power). Mates with JET_XT30_M."
+    pinlabels: [POS, NEG]
+
+  JET_XT30_M:
+    type: XT30U male
+    subtype: male
+    manufacturer: Amass
+    mpn: XT30U-M
+    notes: "XT30U male on the pigtail soldered to the Jetson board pads. Mates with JET_XT30_F."
+    pinlabels: [POS, NEG]
 
   # ---- SIYI A8-MINI camera (tag A8M). -----------------------------------------------------------
   # The camera has three ports (SIYI diagram): Video & Protocol (9 pins), Gimbal Control (S.BUS,
@@ -54,41 +106,46 @@ connectors:
   # The A8-MINI user manual (v1.10) gives no connector series or part number in its text (the port
   # diagram is a picture), and the housing photo shows two latching headers (9-pin and 4-pin) with
   # no pin 1 marking and no readable part number.
-  # TODO: housing series (measure the pitch; the A2-MINI used a GH 1.25 mm), plug or socket, part
-  # numbers, and which end is pin 1. The pin numbers below follow the diagram left to right.
+  # SIYI supplies the cables with these housings (housing to RJ45 plug, housing to XT30U-M), so the
+  # housings, their series and the two cables are not bought and are left as they are. The pin
+  # numbers below follow the diagram left to right.
   A8M_NET:
-    type: 9-pin housing   # TODO: series
+    type: 9-pin housing (on the SIYI cable)
     notes: "A8-MINI Video and Protocol port, Ethernet pins only (10/100). Default camera IP 192.168.144.25."
     pinlabels: [DP, DM, RX-, RX+, TX-, TX+, GND, IO, NC]
     hide_disconnected_pins: true
+    ignore_in_bom: true
 
   # Power port, pins in the order of the SIYI diagram: GND, GND, 3S-6S, 3S-6S. Both pins of each
   # pair are wired. Manual spec (v1.10): working voltage 11 to 25.2 V (3S to 6S), average 5 W,
   # peak 12 W. So it is NOT 5 V and not the 12S pack either: it is fed 12 V from the 12 V KDE UBEC
   # (servo port 5, see the XT30 pair below). Peak current is about 1 A. The manual warns that lots before June 2023 may not accept 6S
   # (25.2 V) and that the camera low-voltage warning is below 10 V.
-  # TODO: housing series and part number, and which end is pin 1.
+  # On the SIYI power cable, not bought (see A8M_NET).
   A8M_PWR:
-    type: 4-pin housing   # TODO: series
+    type: 4-pin housing (on the SIYI cable)
     notes: "A8-MINI power port: 2 x power (3S-6S) and 2 x GND. All four pins wired."
     pinlabels: [GND_1, GND_2, VIN_1, VIN_2]
+    ignore_in_bom: true
 
   # XT30 pair on the camera power lead. The male is on the camera cable; the female is the BEC
   # side and is fed from servo port 5 of the 12 V KDE UBEC (cable W_CEL_07). Pin IDs are
   # synthetic (the XT30 has no pin numbers); the housing is keyed, so polarity cannot be reversed.
-  # TODO: variant (plain XT30, XT30U, XT30PW) and part numbers; the XT30 contact takes the two
-  # paralleled 26 AWG wires per polarity (check the solder cup size).
+  # XT30U-M on the SIYI power cable (supplied with it, not bought) and XT30U-F on our side.
   A8M_XT30_M:
-    type: XT30 male
+    type: XT30U male
     subtype: male
     manufacturer: Amass
-    notes: "A8-MINI power lead, XT30 male. Mates with A8M_XT30_F."
+    mpn: XT30U-M
+    notes: "A8-MINI power lead, XT30U male (on the SIYI cable). Mates with A8M_XT30_F."
     pinlabels: [POS, NEG]
+    ignore_in_bom: true
 
   A8M_XT30_F:
-    type: XT30 female
+    type: XT30U female
     subtype: female
     manufacturer: Amass
+    mpn: XT30U-F
     notes: "A8-MINI power, XT30 female (BEC side), fed from 12 V UBEC servo port 5."
     pinlabels: [POS, NEG]
 
@@ -96,17 +153,17 @@ connectors:
   # 6 ports, 3.3 A each; pin order S, +, - per the UBEC drawing, orient the plug so signal and ground
   # are not swapped). The camera takes 1 A peak (12 W), so one port is plenty. Only + and - are
   # used; S stays empty. The harness side is a standard 3-pin servo plug housing.
-  # TODO: housing series and part number (2.54 mm servo-style housing, crimp contacts), and the wire
-  # range its contacts take (22 AWG is the plan).
+  # Plug housing: Molex KK 254 3-pin (DuPont). TODO: check that its contacts take 22 AWG.
   UBEC12_CAM:
-    type: 3-pin servo plug housing (2.54 mm)   # TODO: part number
+    type: Molex KK 254 3-pin housing (DuPont)
+    manufacturer: Molex
     subtype: female
     notes: "12 V KDE UBECUVC servo port 5 (camera). Pins S, +, -; S not wired. 3.3 A max per port, camera 1 A peak."
     pinlabels: [S, V_POS, GND]
     hide_disconnected_pins: true
 
   # ---- Camera cable RJ45 plug, and the Jetson Ethernet port it plugs into ---------------------
-  # The camera Ethernet pins are converted to an RJ45 by our own cable (W_CEL_01). That RJ45 plug
+  # The camera Ethernet pins are converted to an RJ45 by the SIYI cable (W_CEL_01). That RJ45 plug
   # (A8M_RJ45) then plugs into the Ethernet port on the Jetson board (JET_ETH). The camera
   # connects straight to the Jetson, no switch. The Jetson runs its own DHCP server.
   # Pin numbers and names on both are the standard RJ45 (T568) ones as seen by the Jetson, an
@@ -118,82 +175,24 @@ connectors:
   A8M_RJ45:
     type: RJ45 plug (8P8C)
     subtype: male
-    notes: "Plug on the A8-MINI cable, into the Jetson Ethernet port. Pins 4, 5, 7, 8 unused (camera is 10/100)."
+    notes: "Plug on the A8-MINI cable (supplied by SIYI), into the Jetson Ethernet port. Pins 4, 5, 7, 8 unused (camera is 10/100)."
     pinlabels: [TX+, TX-, RX+, NC, NC, RX-, NC, NC]
     hide_disconnected_pins: true
+    ignore_in_bom: true
 
   # TODO: which Jetson module and carrier board, and where the port sits.
+  # On the Jetson board, not bought, so out of the BOM.
   JET_ETH:
     type: RJ45 jack (8P8C)
     subtype: female
     notes: "Jetson board Ethernet port. Direct link to the camera. Pins 4, 5, 7, 8 not used by the camera."
     pinlabels: [TX+, TX-, RX+, NC, NC, RX-, NC, NC]
-
-  # ---- Waveshare 5G dongles (tag WAV, two of them) -> Jetson, USB 2.0 only -------------------
-  # Dongle: Waveshare 5G dongle board with an onboard USB 3.1 Type-A plug (from the photo).
-  # Jetson: Waveshare Orin Nano/NX base board, 4 Type-A jacks (3 USB 3.2, 1 USB 2.0).
-  # Both dongles are wired USB 2.0 only (D+, D-, GND). The SuperSpeed pins stay unwired, so the
-  # link runs at 480 Mbit/s. The dongle's USB 3 plug still fits a USB 2.0 jack.
-  # Each dongle has a female jack on our extension (dongle side) and a male plug (Jetson side).
-  # VBUS (5 V) IS wired for now (first draft): the dongle is powered from the Jetson USB jack and
-  # needs about 2 A. WARNING: a normal USB Type-A contact is rated about 1.5 A and Waveshare gives no
-  # per-port current limit for the base board, so two 2 A dongles may brown out the Jetson USB ports.
-  # In a later draft the dongles get their own 5 V BEC (the 5 V KDE would then be near 10 A peak).
-  # TODO: check the real per-port limit on the base board and measure the dongle draw.
-  # USB Type-A pin order: 1 VBUS, 2 D-, 3 D+, 4 GND, 5 SSRX-, 6 SSRX+, 7 GND_DRAIN, 8 SSTX-, 9 SSTX+.
-  # TODO: part numbers for the plug and jack, and whether the cable is shielded.
-  WAV1_USB:
-    type: USB 3.x Type-A plug
-    subtype: male
-    notes: "Plug on Waveshare dongle 1. Pins 1 to 4 are wired (VBUS plus USB 2.0 data and GND). The dongle is powered from pin 1 (VBUS), about 2 A."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
-
-  WAV1_EXT_F:
-    type: USB 2.0 Type-A jack   # TODO: part number
-    subtype: female
-    notes: "Jack on our extension, dongle 1 plugs into it. A USB 3 plug fits a USB 2.0 jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  WAV1_EXT_M:
-    type: USB 2.0 Type-A plug   # TODO: part number
-    subtype: male
-    notes: "Plug on our extension, goes into the Jetson USB jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  JET_USB1:
-    type: USB Type-A jack (Jetson base board)
-    subtype: female
-    notes: "Jetson base board USB-A jack for dongle 1. TODO: which jack (3 are USB 3.2, 1 is USB 2.0)."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
-
-  WAV2_USB:
-    type: USB 3.x Type-A plug
-    subtype: male
-    notes: "Plug on Waveshare dongle 2. Pins 1 to 4 are wired (VBUS plus USB 2.0 data and GND). The dongle is powered from pin 1 (VBUS), about 2 A."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
-
-  WAV2_EXT_F:
-    type: USB 2.0 Type-A jack   # TODO: part number
-    subtype: female
-    notes: "Jack on our extension, dongle 2 plugs into it. A USB 3 plug fits a USB 2.0 jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  WAV2_EXT_M:
-    type: USB 2.0 Type-A plug   # TODO: part number
-    subtype: male
-    notes: "Plug on our extension, goes into the Jetson USB jack."
-    pinlabels: [VBUS, D-, D+, GND]
-
-  JET_USB2:
-    type: USB Type-A jack (Jetson base board)
-    subtype: female
-    notes: "Jetson base board USB-A jack for dongle 2. TODO: which jack (3 are USB 3.2, 1 is USB 2.0)."
-    pinlabels: [VBUS, D-, D+, GND, SSRX-, SSRX+, GND_DRAIN, SSTX-, SSTX+]
+    ignore_in_bom: true
 
   # ---- Cube TELEM2 -> TTL-to-USB converter -> Jetson USB 2.0 jack (MAVLink telemetry link) ------
   # The Cube telemetry port TELEM2 is wired to a TTL-to-USB converter board, which plugs straight
   # into the Jetson's USB 2.0 jack (the one USB 2.0 Type-A jack on the base board; the other three
-  # are USB 3.2, and the two 5G dongles use those, see the TODOs on JET_USB1 and JET_USB2).
+  # are USB 3.2, and the two 5G dongles use those, see JET_USB1 and JET_USB2 in cellular_dongles_system.yaml).
   # The radio's own UART is on TELEM1 (rf_system.yaml).
   # TODO: part numbers for everything in this link (Cube plug, converter, jack), not chosen yet.
   #
@@ -201,9 +200,12 @@ connectors:
   # 3.3 V (same pin order as TELEM1, standard Cube pinout). Only TX, RX and GND are used. The 5 V
   # pin stays empty (the converter is powered from the Jetson USB), and CTS and RTS stay empty
   # (no flow control).
-  # TODO: plug series (the Cube end is a JST GH).
+  # Plug: JST GH 6-pin housing (GHR-06V-S), the same family as the Cube port.
   FC_TELEM2:
-    type: 6-pin TELEM plug   # TODO: series
+    type: JST GH 6-pin plug housing
+    subtype: female
+    manufacturer: JST
+    mpn: GHR-06V-S
     notes: "Cube Orange+ TELEM2 port (UART). Cube TX (pin 2) goes to the converter RXD, Cube RX (pin 3) to the converter TXD. 3.3 V logic."
     pinlabels: [VCC, TX, RX, CTS, RTS, GND]
     hide_disconnected_pins: true
@@ -218,6 +220,7 @@ connectors:
     type: UART header (TTL side)   # TODO: series
     notes: "TTL-to-USB converter, UART side. Converter TXD goes to the Cube RX, converter RXD to the Cube TX. Must be 3.3 V logic."
     pinlabels: [TXD, RXD, GND]
+    ignore_in_bom: true
 
   # TTL-to-USB converter, USB side: assumed to have an onboard USB Type-A plug (like the dongles),
   # so it plugs straight into the Jetson jack with no cable. USB 2.0 only (VBUS, D-, D+, GND),
@@ -229,12 +232,14 @@ connectors:
     subtype: male
     notes: "TTL-to-USB converter USB plug, goes straight into the Jetson USB 2.0 jack. VBUS powers the converter."
     pinlabels: [VBUS, D-, D+, GND]
+    ignore_in_bom: true
 
   JET_USB3:
     type: USB 2.0 Type-A jack (Jetson base board)
     subtype: female
     notes: "Jetson base board USB 2.0 jack, for the TTL-to-USB converter (Cube TELEM2 link). TODO: confirm which physical jack is the USB 2.0 one."
     pinlabels: [VBUS, D-, D+, GND]
+    ignore_in_bom: true
 
 cables:
 
@@ -242,46 +247,25 @@ cables:
   #   white-orange + orange = RJ45 pins 1, 2  (Jetson TX pair, goes to camera RX pins)
   #   white-green + green   = RJ45 pins 3, 6  (Jetson RX pair, comes from camera TX pins)
   # Keep each pair twisted all the way to the pins.
-  # TODO: cable type and gauge (shielded or not) are not chosen. 26 AWG is a placeholder.
+  # Supplied by SIYI (housing to RJ45 plug), so it is not bought and its gauge is the camera cable's
+  # own (not in the manual).
   W_CEL_01:
     wirecount: 4
-    gauge: 26 AWG
     colors: [WHOG, OG, WHGN, GN]
     length: 0   # TODO: set after layout
+    ignore_in_bom: true
     notes: "A8-MINI Ethernet pins to RJ45 plug. Two twisted pairs, crossover wiring (see comments)."
 
   # A8-MINI power port -> XT30 male. Two wires per polarity, one per power-port pin: the red pair
   # to the two power pins, the black pair to the two GND pins, each pair joined at the XT30 pin.
-  # The load is well under 1 A in total. 26 AWG is a placeholder (the port housing is not
-  # chosen yet, a GH contact takes 26 to 30 AWG).
-  # TODO: gauge once the housing series is known, and length after layout.
+  # The load is well under 1 A in total. Supplied by SIYI (housing to XT30U-M), so it is not bought
+  # and its gauge is the camera cable's own (not in the manual).
   W_CEL_04:
     wirecount: 4
-    gauge: 26 AWG
     colors: [RD, RD, BK, BK]
     length: 0   # TODO: set after layout
+    ignore_in_bom: true
     notes: "A8-MINI power port to XT30 male. Wires 1, 2 = power (red), 3, 4 = GND (black)."
-
-  # Dongle 1 to Jetson. Standard USB 2.0 colours: red = VBUS, white = D-, green = D+, black = GND.
-  # Keep D- and D+ twisted together. VBUS and GND carry the dongle current (about 2 A), so the
-  # whole cable is 22 AWG (one gauge per cable); 22 AWG is oversized for the data pair but fine for
-  # USB 2.0 over a short run. At 2 A, 22 AWG drops about 0.1 V per metre of cable (supply plus return).
-  # TODO: check the USB Type-A solder cups take 22 AWG, cable type and shield, length after layout.
-  W_CEL_02:
-    wirecount: 4
-    gauge: 22 AWG
-    colors: [RD, WH, GN, BK]
-    length: 0   # TODO: set after layout
-    notes: "USB 2.0 power (VBUS), data and ground for dongle 1, powered from the Jetson USB jack."
-
-  # Dongle 2 to Jetson. Same as W_CEL_02: red = VBUS, white = D-, green = D+, black = GND.
-  # TODO: same checks as W_CEL_02.
-  W_CEL_03:
-    wirecount: 4
-    gauge: 22 AWG
-    colors: [RD, WH, GN, BK]
-    length: 0   # TODO: set after layout
-    notes: "USB 2.0 power (VBUS), data and ground for dongle 2, powered from the Jetson USB jack."
 
   # 12 V UBEC HP output -> Jetson power input (XT30). These are the UBEC's own factory leads (16 AWG,
   # yellow/black, about 210 mm), so they stay out of the BOM; keep 16 AWG if they are extended.
@@ -292,7 +276,19 @@ cables:
     colors: [YE, BK]
     length: 0   # TODO: real length after layout analysis (factory leads are about 0.21 m)
     ignore_in_bom: true
-    notes: "Factory HP output leads of the 12 V UBEC to the Jetson XT30"
+    notes: "Factory HP output leads of the 12 V UBEC to the XT30U-F on the Jetson power path"
+
+  # XT30U-M -> Jetson base board power pads. The wires from the XT30U-M are soldered straight onto
+  # the board pads. The Jetson draws up to about 4.8 A (6 A with a 40 W module). 18 AWG is a
+  # placeholder (it fits the XT30 solder cup and the 16 A table value); the pad size sets the real
+  # limit.
+  # TODO: gauge once the board pad size is known, length after layout.
+  W_CEL_08:
+    wirecount: 2
+    gauge: 18 AWG
+    colors: [RD, BK]
+    length: 0   # TODO: real length after layout analysis
+    notes: "XT30U-M pigtail soldered to the Jetson board power pads"
 
   # 12 V UBEC servo port 5 -> camera XT30 female (+ and - only). Camera is 1 A peak, so 22 AWG is
   # plenty and fits a servo-plug contact and the XT30 solder cup.
@@ -356,39 +352,22 @@ connections:
     - W_CEL_07: [1, 2]
     - A8M_XT30_F: [POS, NEG]
 
-  # 12 V UBEC HP output leads -> Jetson power input.
+  # 12 V UBEC HP output leads -> XT30U-F, which mates the XT30U-M pigtail soldered to the Jetson
+  # board power pads.
   -
     - UBEC12_HP: [HP_POS, HP_NEG]
     - W_CEL_06: [1, 2]
+    - JET_XT30_F: [POS, NEG]
+
+  -
+    - JET_XT30_F: [1, 2]
+    - -->
+    - JET_XT30_M: [1, 2]
+
+  -
+    - JET_XT30_M: [POS, NEG]
+    - W_CEL_08: [1, 2]
     - JET_PWR: [VIN, GND]
-
-  # Dongle 1: dongle plug mates with our jack, the cable runs to our plug, which mates with the Jetson jack.
-  -
-    - WAV1_EXT_F: [1, 2, 3, 4]     # VBUS, D-, D+, GND
-    - W_CEL_02: [1, 2, 3, 4]
-    - WAV1_EXT_M: [1, 2, 3, 4]
-  -
-    - WAV1_USB: [1, 2, 3, 4]
-    - -->
-    - WAV1_EXT_F: [1, 2, 3, 4]
-  -
-    - WAV1_EXT_M: [1, 2, 3, 4]
-    - -->
-    - JET_USB1: [1, 2, 3, 4]
-
-  # Dongle 2: dongle plug mates with our jack, the cable runs to our plug, which mates with the Jetson jack.
-  -
-    - WAV2_EXT_F: [1, 2, 3, 4]     # VBUS, D-, D+, GND
-    - W_CEL_03: [1, 2, 3, 4]
-    - WAV2_EXT_M: [1, 2, 3, 4]
-  -
-    - WAV2_USB: [1, 2, 3, 4]
-    - -->
-    - WAV2_EXT_F: [1, 2, 3, 4]
-  -
-    - WAV2_EXT_M: [1, 2, 3, 4]
-    - -->
-    - JET_USB2: [1, 2, 3, 4]
 
   # Cube TELEM2 -> TTL-to-USB converter. Cube TX goes to the converter RXD and Cube RX to the
   # converter TXD (crossover, as for any UART link).

@@ -5,9 +5,9 @@
 #
 # BEC architecture (current decision): two KDE UBECUVC, both on PDB ESC pads (battery bus).
 #   - 12 V UBEC (ESC7 pads): Jetson (HP leads), SIYI camera (servo port 5), the four wing servos
-#     (servo ports 1 to 4). Outputs are wired in cellular_system.yaml and the two wing actuator files.
+#     (servo ports 1 to 4). Outputs are wired in cellular_system.yaml and the two wing fuselage-side files.
 #   - 5 V UBEC (ESC8 pads): Mesh Rider radio (HP leads, rf_system.yaml) and the six wing LEDs (servo
-#     ports 1 to 6, the two wing actuator files). 5 V for now; the final voltage (5 V or 6 V) is open, see
+#     ports 1 to 6, the two wing fuselage-side files). 5 V for now; the final voltage (5 V or 6 V) is open, see
 #     the note on UBEC5_IN.
 #   - PDB on-board BECs: the 5 V BEC only feeds the Cube through the PDB 6-pin output (and the Cube
 #     peripherals: GPS, airspeed, LiDAR). The PDB 12 V BEC is not used.
@@ -19,6 +19,45 @@
 metadata:
   title: Power system
   description: Battery, PDB and BEC input wiring, plus VTOL motor power to the wing split and forward ESC power
+
+# Parts that are bought but are not connectors or cables (WireViz adds these lines to the BOM).
+additional_bom_items:
+
+  # Power distribution board: axldrone PDB 400A (14 to 60 V input, eight ESC pad pairs, current
+  # sensor, MOSFET soft switch, on-board 5 V and 12 V BECs). Moved here from flight_control_system.yaml.
+  # Its pads and plugs are the PDB_* connectors below and PDB_FC_PWR in flight_control_system.yaml.
+  # Many unrelated "PDB400A" boards are sold under similar names: the seller must be axldrone.
+  - description: Power distribution board, 400 A
+    qty: 1
+    designators: PDB
+    manufacturer: axldrone
+    mpn: PDB 400A
+
+  # Two KDE Direct UBECUVC, same model: UBEC12 set to 12 V (Jetson, camera, four wing servos) and UBEC5
+  # set to 5 V (radio, six wing LEDs). Selectable 5, 6, 8 or 12 V output, 14S LiHV maximum input,
+  # 10 A continuous. KDE has no separate part number: the SKU on kdedirect.com is KDE-UBECUVC.
+  - description: UBEC, KDE UBECUVC (selectable 5, 6, 8, 12 V output)
+    qty: 2
+    designators: [UBEC12, UBEC5]
+    manufacturer: KDE Direct
+    mpn: KDE-UBECUVC
+
+  # PDB soft power switch: ProMax PPS16006RL-11F, latching 16 mm metal pushbutton with LED ring.
+  # It was a connector line (SW_BTN) before; it is a switch, so it is listed here and the connector
+  # entry below stays in the diagram only. Its JST XH plug on the PDB side (PDB_SW) is a connector line.
+  # TODO: terminal type (crimp or solder lug) and the LED resistor, see SW_BTN.
+  - description: Pushbutton switch, 16 mm latching, metal, LED ring
+    qty: 1
+    designators: SW_BTN
+    manufacturer: ProMax
+    mpn: PPS16006RL-11F
+
+  # Capacitor across the PDB battery bolts, 220 uF 100 V as the PDB datasheet recommends.
+  # TODO: part not fixed yet (low-ESR, 100 V or higher, radial, ripple current rating). Same note as
+  # CAP_BAT below.
+  - description: Capacitor, electrolytic 220 uF 100 V, low-ESR
+    qty: 1
+    designators: CAP_BAT
 
 connectors:
 
@@ -106,6 +145,7 @@ connectors:
     notes: "SPST, C/NO/NC terminals. IP65. Red LED ring, separate LED pins. Closed = PDB on."
     pinlabels: ["C", "NO", "NC", "LED_POS", "LED_NEG"]   # NO is quoted on purpose: unquoted YAML reads NO as false
     hide_disconnected_pins: true
+    ignore_in_bom: true   # listed as a switch in additional_bom_items
 
   # Recommended by the PDB datasheet: 220 uF 100 V capacitor on the battery side of the PDB.
   # Battery max is 50.4 V (12S), so 100 V leaves a wide margin. Low-ESR electrolytic.
@@ -115,38 +155,38 @@ connectors:
     type: Electrolytic capacitor 220 uF 100 V
     notes: "Battery side of the PDB, across B+ and B-. Observe polarity."
     pinlabels: [CAP_POS, CAP_NEG]
+    ignore_in_bom: true   # listed as a capacitor in additional_bom_items
 
   # Wing split, fuselage side: one XT90 female per VTOL motor ESC. The wing side (XT90 male, then
   # the ESC) is added with the actuators system. The ESC power pads sit on the battery bus, so
   # these carry full battery voltage (50.4 V max) and the motor current.
   # Synthetic pin IDs (the XT90 has no pin numbers); the housing is keyed, so polarity cannot
   # be reversed.
-  # Variant fixed for now: plain XT90 (no anti-spark). TODO: revisit the variant (XT90-S anti-spark
-  # or XT90H) and set the part number. Use one variant on both sides of the split. XT90 is rated for 90 A continuous: check against the real ESC
-  # peak current.
+  # Variant: plain XT90 (no anti-spark), decided. Use one variant on both sides of the split. XT90 is
+  # rated for 90 A continuous: check against the real ESC peak current.
   XT90_VTOL1_F:
-    type: XT90 female
+    type: XT90 female (plain)
     subtype: female
     manufacturer: Amass
     notes: "VTOL motor 1 (front right) power, wing split (fuselage side)"
     pinlabels: [POS, NEG]
 
   XT90_VTOL2_F:
-    type: XT90 female
+    type: XT90 female (plain)
     subtype: female
     manufacturer: Amass
     notes: "VTOL motor 2 (rear left) power, wing split (fuselage side)"
     pinlabels: [POS, NEG]
 
   XT90_VTOL3_F:
-    type: XT90 female
+    type: XT90 female (plain)
     subtype: female
     manufacturer: Amass
     notes: "VTOL motor 3 (front left) power, wing split (fuselage side)"
     pinlabels: [POS, NEG]
 
   XT90_VTOL4_F:
-    type: XT90 female
+    type: XT90 female (plain)
     subtype: female
     manufacturer: Amass
     notes: "VTOL motor 4 (rear right) power, wing split (fuselage side)"
@@ -165,7 +205,7 @@ connectors:
   # PDB on-board BEC header (J3, 2x7): four 5 V and three 12 V outputs. None of them is wired here:
   # the Cube is powered from the PDB 6-pin output (the PDB 5 V BEC, see flight_control_system.yaml)
   # and the other loads are on the two KDE UBECs (outputs modelled in cellular_system.yaml,
-  # the wing actuator files and rf_system.yaml). The PDB 12 V BEC is unused (4 A continuous, 5 A peak
+  # the wing fuselage-side files and rf_system.yaml). The PDB 12 V BEC is unused (4 A continuous, 5 A peak
   # per BEC, all outputs of one voltage share one bus). Kept commented out for reference.
   # Un-comment it if a load is ever wired to this header.
   #
@@ -218,7 +258,7 @@ cables:
     notes: "Capacitor leads, short as possible"
 
   # PDB ESC pads -> XT90 female at the wing split, one cable per VTOL motor.
-  # 10 AWG (recommendation), same as the wing side (W_ACT_01 to W_ACT_04 in the two wing actuator files).
+  # 10 AWG (recommendation), same as the wing side (W_ACT_02 and W_ACT_03 in the two wing motors files).
   # Motor current is about 16 A at 6 kg thrust and about 75-80 A at full throttle (Vector Technics
   # 8020 PRO 120KV test table, 12S), so 10 AWG silicone wire is enough for a short run. Check that
   # it fits the PDB solder pads and the XT90 solder cups.
